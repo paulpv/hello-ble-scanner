@@ -1,12 +1,20 @@
 package com.github.paulpv.helloblescanner
 
+import android.annotation.SuppressLint
+import android.bluetooth.BluetoothAdapter
+import android.bluetooth.BluetoothManager
+import android.bluetooth.le.ScanSettings
 import android.content.Context
+import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.os.Build
+import android.util.Log
 import java.util.*
 import java.util.concurrent.TimeUnit
 
 object Utils {
+    private const val TAG = "Utils"
+
     fun getClassName(
         className: String?,
         shortClassName: Boolean
@@ -168,5 +176,105 @@ object Utils {
         }
         sb.append(formatNumber(elapsedMillis, 3))
         return sb.toString()
+    }
+
+    //
+    //
+    //
+
+    @Suppress("MemberVisibilityCanBePrivate")
+    @JvmStatic
+    fun isBluetoothSupported(context: Context): Boolean {
+        return context.packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH)
+    }
+
+    @JvmStatic
+    fun isBluetoothLowEnergySupported(context: Context): Boolean {
+        return context.packageManager.hasSystemFeature(PackageManager.FEATURE_BLUETOOTH_LE)
+    }
+
+    /**
+     * @param context
+     * @return null if Bluetooth is not supported
+     */
+    @Suppress("MemberVisibilityCanBePrivate")
+    @JvmStatic
+    fun getBluetoothManager(context: Context): BluetoothManager? {
+        return if (!isBluetoothSupported(context)) null else context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
+    }
+
+    /**
+     * Per: http://developer.android.com/reference/android/bluetooth/BluetoothAdapter.html
+     * "To get a BluetoothAdapter representing the local Bluetooth adapter, when running on JELLY_BEAN_MR1 and below,
+     * call the static getDefaultAdapter() method; when running on JELLY_BEAN_MR2 and higher, retrieve it through
+     * getSystemService(String) with BLUETOOTH_SERVICE. Fundamentally, this is your starting point for all Bluetooth
+     * actions."
+     *
+     * @return null if Bluetooth is not supported
+     */
+    @SuppressLint("ObsoleteSdkInt")
+    @JvmStatic
+    fun getBluetoothAdapter(context: Context): BluetoothAdapter? {
+        return if (!isBluetoothSupported(context)) null else if (Build.VERSION.SDK_INT <= 17) BluetoothAdapter.getDefaultAdapter() else getBluetoothManager(
+            context
+        )?.adapter
+    }
+
+    @JvmStatic
+    fun isBluetoothAdapterEnabled(bluetoothAdapter: BluetoothAdapter?): Boolean {
+        return try {
+            // NOTE:(pv) Known to sometimes throw DeadObjectException
+            //  https://code.google.com/p/android/issues/detail?id=67272
+            //  https://github.com/RadiusNetworks/android-ibeacon-service/issues/16
+            bluetoothAdapter != null && bluetoothAdapter.isEnabled
+        } catch (e: Exception) {
+            Log.w(TAG, "isBluetoothAdapterEnabled: bluetoothAdapter.isEnabled()", e)
+            false
+        }
+    }
+
+    /**
+     * @param bluetoothAdapter
+     * @param on
+     * @return true if successfully set; false if the set failed
+     * @see <ul>
+     * <li><a href="https://code.google.com/p/android/issues/detail?id=67272">https://code.google.com/p/android/issues/detail?id=67272</a></li>
+     * <li><a href="https://github.com/RadiusNetworks/android-ibeacon-service/issues/16">https://github.com/RadiusNetworks/android-ibeacon-service/issues/16</a></li>
+     * </ul>
+     */
+    @Suppress("unused")
+    @JvmStatic
+    fun bluetoothAdapterEnable(bluetoothAdapter: BluetoothAdapter?, on: Boolean): Boolean {
+        // TODO:(pv) Known to sometimes throw DeadObjectException
+        //  https://code.google.com/p/android/issues/detail?id=67272
+        //  https://github.com/RadiusNetworks/android-ibeacon-service/issues/16
+        return bluetoothAdapter != null &&
+                if (on) {
+                    try {
+                        bluetoothAdapter.enable()
+                        true
+                    } catch (e: Exception) {
+                        Log.v(TAG, "bluetoothAdapterEnable: bluetoothAdapter.enable()", e)
+                        false
+                    }
+                } else {
+                    try {
+                        bluetoothAdapter.disable()
+                        true
+                    } catch (e: Exception) {
+                        Log.v(TAG, "bluetoothAdapterEnable: bluetoothAdapter.disable()", e)
+                        false
+                    }
+                }
+    }
+
+    @JvmStatic
+    fun callbackTypeToString(callbackType: Int): String {
+        return when (callbackType) {
+            ScanSettings.CALLBACK_TYPE_FIRST_MATCH -> "CALLBACK_TYPE_FIRST_MATCH"
+            ScanSettings.CALLBACK_TYPE_MATCH_LOST -> "CALLBACK_TYPE_MATCH_LOST"
+            ScanSettings.CALLBACK_TYPE_ALL_MATCHES -> "CALLBACK_TYPE_ALL_MATCHES"
+            else -> "CALLBACK_TYPE_UNKNOWN"
+        } + "($callbackType)"
     }
 }

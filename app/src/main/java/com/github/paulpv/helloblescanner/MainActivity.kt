@@ -1,16 +1,21 @@
 package com.github.paulpv.helloblescanner
 
+import android.Manifest
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import android.view.Menu
 import android.view.View
 import android.widget.TextView
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SwitchCompat
 import androidx.appcompat.widget.Toolbar
+import androidx.core.content.ContextCompat
 import androidx.core.view.MenuCompat
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity() {
@@ -73,18 +78,55 @@ class MainActivity : AppCompatActivity() {
                 switchScan = actionView.findViewById(R.id.action_switch_control)
                 switchScan.isChecked = businessLogic.isScanStarted
                 switchScan.setOnCheckedChangeListener { _, isChecked ->
-                    if (isChecked) {
-                        businessLogic.scanStart()
-                        // TODO:(pv) if failed then buttonView.isChecked = false
-                    } else {
-                        businessLogic.scanStop()
-                    }
-                    devicesAdapter.autoUpdateVisibleItems(isChecked)
+                    scanStart(isChecked)
                 }
             }
         }
 
         return true
+    }
+
+    //
+    //
+    //
+
+    private val requestScanningPermission = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            scanStart(true)
+        } else {
+            onScanningPermissionDenied()
+        }
+    }
+
+    private fun onScanningPermissionDenied() {
+        switchScan.isChecked = false
+        val view: View = window.decorView.findViewById(android.R.id.content)
+        Snackbar.make(view, "Location permission required", Snackbar.LENGTH_LONG).show()
+    }
+
+    private fun scanStart(start: Boolean) {
+        if (start) {
+            when {
+                ContextCompat.checkSelfPermission(
+                    this,
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                ) == PackageManager.PERMISSION_GRANTED -> {
+                    businessLogic.scanStart()
+                    // TODO:(pv) if failed then set buttonView.isChecked = false
+                    devicesAdapter.autoUpdateVisibleItems(start)
+                }
+                shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION) -> {
+                    onScanningPermissionDenied()
+                }
+                else -> {
+                    requestScanningPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                }
+            }
+        } else {
+            businessLogic.scanStop()
+        }
     }
 
     private fun onItemSelected(item: DeviceInfo) {
