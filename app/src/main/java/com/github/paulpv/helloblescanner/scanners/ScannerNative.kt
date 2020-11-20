@@ -36,7 +36,7 @@ class ScannerNative(
     }
 
     private fun onScanFailed(caller: String, errorCode: Int) {
-        Log.e(TAG, "${Utils.getTimeDurationFormattedString(scanningElapsedMillis)} onScanFailed: $caller $errorCode")
+        Log.e(TAG, "onScanFailed: caller=$caller, errorCode=$errorCode")
     }
 
     private fun onBatchScanResults(caller: String, scanResults: MutableList<ScanResult>?) {
