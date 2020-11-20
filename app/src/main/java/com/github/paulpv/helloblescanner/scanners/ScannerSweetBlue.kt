@@ -64,8 +64,14 @@ class ScannerSweetBlue(
             undiscoverDeviceWhenBleTurnsOff = false
             undiscoveryKeepAlive = Interval.secs(DEVICE_SCAN_TIMEOUT_SECONDS_DEFAULT)
         }
+
+        /**
+         * Get a trial key at https://sweetblue.io/#try and provide a package name.
+         * Rename app/build.gradle android.defaultConfig.applicationId to the provided package name.
+         */
         val apiKey =
             "aF_IbhfP2u35uKXEdcp66yeGNSRLKXPuO1VCX3LCA8YmghcM6IuLvkPaLmAidrlEuLIR90KAWGTJLA_UUI3snn89zyMqfB6Pq1vyOKn866vWbKqVhtNLyeiz5ljS_aYdABEFnxKWVpcM_myYWT8fvq1iBBFW2it7QPkpJC5Cr1fPg98Ako1vXqXoY7OSAxha2_UWd6m3TpNFtx6Bpv3TBFkbN4w-OM9bHx9_iCZl3UA17_zptQuBu4pSX7rhBpzhyTBfIp6vFE_G-eVuXoPl-SMgMdCi9y4h1pIMLOUT1N1aIBgZNc9KMfsCuklq7Umrzca6fxspRkojMRP6fMIg8w"
+
         manager = BleManager.createInstance(applicationContext, config, apiKey)
 
         scanFilter = MyScanFilter(nativeScanFilters)
