@@ -14,7 +14,7 @@ class ScannerNative(
     private val nativeScanSettings: ScanSettings
 ) : ScannerAbstract(applicationContext) {
     companion object {
-        private const val TAG = "ScannerDocumented"
+        private const val TAG = "ScannerNative"
     }
 
     private val scanningCallback = object : ScanCallback() {
