@@ -8,6 +8,7 @@ import android.os.*
 import android.util.Log
 import com.github.paulpv.helloblescanner.scanners.ScannerAbstract
 import com.github.paulpv.helloblescanner.scanners.ScannerNative
+import com.github.paulpv.helloblescanner.scanners.ScannerSweetBlue
 import kotlin.math.ceil
 
 class MyBusinessLogic(private val applicationContext: Context, private val looper: Looper) {
@@ -18,6 +19,8 @@ class MyBusinessLogic(private val applicationContext: Context, private val loope
 
         @Suppress("PrivatePropertyName")
         private val PERSISTENT_SCANNING_STARTED_UPTIME_MILLIS_UNDEFINED = 0L
+
+        val SCANNER_TYPE_DEFAULT = ScannerTypes.SweetBlue
     }
 
     /**
@@ -100,26 +103,29 @@ class MyBusinessLogic(private val applicationContext: Context, private val loope
 
     enum class ScannerTypes {
         Native,
-        //SweetBlue,
+        SweetBlue,
         //Nordic
     }
 
-    var scannerType: ScannerTypes = ScannerTypes.Native
+    var scannerType: ScannerTypes = SCANNER_TYPE_DEFAULT
         set(value) {
-            if (isScanStarted) {
-                throw IllegalStateException("cannot set scannerType while scanning")
+            val wasScanning = isScanStarted
+            if (wasScanning) {
+                scanStop()
             }
             scanner = when (value) {
-                ScannerTypes.Native -> {
-                    ScannerNative(applicationContext, nativeScanFilters, nativeScanSettings)
-                }
+                ScannerTypes.Native -> ScannerNative(applicationContext, nativeScanFilters, nativeScanSettings)
+                ScannerTypes.SweetBlue -> ScannerSweetBlue(applicationContext, nativeScanFilters, nativeScanSettings)
             }
             field = value
+            if (wasScanning) {
+                scanStart()
+            }
         }
 
     fun initialize() {
         Log.i(TAG, "initialize")
-        scannerType = ScannerTypes.Native
+        scannerType = SCANNER_TYPE_DEFAULT
     }
 
     var scanStartCount = 0

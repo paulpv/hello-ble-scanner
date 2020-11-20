@@ -25,6 +25,11 @@ class ScannerNative(
         // @formatter:on
     }
 
+    override fun shutdown() {
+        Log.i(TAG, "shutdown()")
+        super.shutdown()
+    }
+
     override fun scanStart() {
         Log.i(TAG, "scanStart: startScan starting ScanCallback scan")
         bluetoothLeScanner?.startScan(nativeScanFilters, nativeScanSettings, scanningCallback)
