@@ -3,9 +3,10 @@ package com.github.paulpv.helloblescanner.scanners
 import android.content.Context
 import android.util.Log
 import com.github.paulpv.helloblescanner.BuildConfig
+import com.github.paulpv.helloblescanner.DeviceInfo
 import com.github.paulpv.helloblescanner.Utils
 
-abstract class ScannerAbstract(private val applicationContext: Context) {
+abstract class ScannerAbstract(private val applicationContext: Context, private val callbacks: Callbacks) {
     companion object {
         private const val TAG = "ScannerAbstract"
 
@@ -16,8 +17,15 @@ abstract class ScannerAbstract(private val applicationContext: Context) {
         }
     }
 
-    private val bluetoothAdapter = Utils.getBluetoothAdapter(applicationContext)
-    protected val bluetoothLeScanner = bluetoothAdapter?.bluetoothLeScanner
+    interface Callbacks {
+        fun onScanningStarted()
+        fun onScanningStopped()
+        fun onDeviceAdded(deviceInfo: DeviceInfo)
+        fun onDeviceUpdated(deviceInfo: DeviceInfo)
+        fun onDeviceRemoved(deviceInfo: DeviceInfo)
+    }
+
+    protected val bluetoothAdapter = Utils.getBluetoothAdapter(applicationContext)
 
     @Suppress("MemberVisibilityCanBePrivate")
     val isBluetoothLowEnergySupported: Boolean
@@ -32,7 +40,21 @@ abstract class ScannerAbstract(private val applicationContext: Context) {
         scanStop()
     }
 
+    abstract fun clear()
+
     abstract fun scanStart()
 
     abstract fun scanStop()
+
+    protected fun onDeviceAdded(deviceInfo: DeviceInfo) {
+        callbacks.onDeviceAdded(deviceInfo)
+    }
+
+    protected fun onDeviceUpdated(deviceInfo: DeviceInfo) {
+        callbacks.onDeviceUpdated(deviceInfo)
+    }
+
+    protected fun onDeviceRemoved(deviceInfo: DeviceInfo) {
+        callbacks.onDeviceRemoved(deviceInfo)
+    }
 }

@@ -11,14 +11,84 @@ import android.os.Build
 import android.util.Log
 import java.util.*
 import java.util.concurrent.TimeUnit
+import kotlin.reflect.KClass
 
 object Utils {
-    private const val TAG = "Utils"
+    private val TAG: String = TAG(Utils::class)
 
-    fun getClassName(
-        className: String?,
-        shortClassName: Boolean
-    ): String {
+    @Suppress("MemberVisibilityCanBePrivate")
+    @JvmStatic
+    val LOG_TAG_LENGTH_LIMIT_PRE_API24 = 23
+
+    @Suppress("MemberVisibilityCanBePrivate")
+    @JvmStatic
+    val LOG_TAG_LENGTH_LIMIT_POST_API23 = -1
+
+    /**
+     * Per [android.util.Log.isLoggable] Throws description:
+     * http://developer.android.com/reference/android/util/Log.html#isLoggable(java.lang.String, int)
+     * '''
+     * IllegalArgumentException is thrown if the tag.length() > 23 for Nougat (7.0) releases (API <= 23) and prior, there is no tag limit of concern after this API level.
+     * '''
+     */
+    @Suppress("MemberVisibilityCanBePrivate")
+    @JvmStatic
+    val LOG_TAG_LENGTH_LIMIT =
+        if (Build.VERSION.SDK_INT < 24) LOG_TAG_LENGTH_LIMIT_PRE_API24 else LOG_TAG_LENGTH_LIMIT_POST_API23
+
+    @Suppress("FunctionName")
+    @JvmStatic
+    fun TAG(o: Any?) = TAG(o, LOG_TAG_LENGTH_LIMIT)
+
+    @Suppress("FunctionName")
+    @JvmStatic
+    fun TAG(o: Any?, limit: Int) = TAG(o?.javaClass, limit)
+
+    fun TAG(c: KClass<*>?, limit: Int = LOG_TAG_LENGTH_LIMIT) = TAG(c?.java, limit)
+
+    @Suppress("FunctionName")
+    @JvmStatic
+    fun TAG(c: Class<*>?) = TAG(c, LOG_TAG_LENGTH_LIMIT)
+
+    @Suppress("FunctionName")
+    @JvmStatic
+    fun TAG(c: Class<*>?, limit: Int) = TAG(getShortClassName(c), limit)
+
+    @Suppress("FunctionName")
+    @JvmStatic
+    fun TAG(tag: String) = TAG(tag, LOG_TAG_LENGTH_LIMIT)
+
+    /**
+     * Limits the tag length to [#LOG_TAG_LENGTH_LIMIT]
+     * Example: "ReallyLongClassName" to "ReallyLo…lassName"
+     *
+     * @param tag
+     * @return the tag limited to [#LOG_TAG_LENGTH_LIMIT]
+     */
+    @Suppress("FunctionName")
+    @JvmStatic
+    fun TAG(tag: String, limit: Int): String {
+        if (limit == -1) {
+            return tag
+        }
+
+        var length = tag.length
+        if (length <= limit) {
+            return "$tag${'\u00A0'.toString().repeat(limit - length)}"
+        }
+
+        @Suppress("NAME_SHADOWING")
+        val tag = tag.substring(tag.lastIndexOf("$") + 1, length)
+        length = tag.length
+        if (length <= limit) {
+            return "$tag${'\u00A0'.toString().repeat(limit - length)}"
+        }
+        val half = limit / 2
+        return tag.substring(0, half) + '…' + tag.substring(length - half)
+    }
+
+    @JvmStatic
+    fun getClassName(className: String?, shortClassName: Boolean): String {
         @Suppress("NAME_SHADOWING") var className = className
         if (className.isNullOrEmpty()) {
             className = "null"
@@ -30,13 +100,115 @@ object Utils {
         return className
     }
 
+    @JvmStatic
     fun getShortClassName(className: String?) = getClassName(className, true)
 
+    @JvmStatic
     fun getShortClassName(o: Any?) = getShortClassName(o?.javaClass)
 
+    @JvmStatic
     fun getShortClassName(c: Class<*>?): String {
         val className = c?.name
         return getShortClassName(className)
+    }
+
+    /**
+     * @see Object.toString
+     */
+    @JvmStatic
+    fun defaultToString(o: Any?): String {
+        return if (o != null) "${getShortClassName(o)}@${Integer.toHexString(o.hashCode())}" else "null"
+    }
+
+    /**
+     * Identical to [.repr], but grammatically intended for Strings.
+     *
+     * @param value value
+     * @return "null", or '\"' + value.toString + '\"', or value.toString()
+     */
+    @JvmStatic
+    fun quote(value: Any?) = repr(value, false)
+
+    /**
+     * Identical to [.quote], but grammatically intended for Objects.
+     *
+     * @param value value
+     * @return "null", or '\"' + value.toString + '\"', or value.toString()
+     */
+    @JvmStatic
+    fun repr(value: Any?) = repr(value, false)
+
+    /**
+     * @param value    value
+     * @param typeOnly typeOnly
+     * @return "null", or '\"' + value.toString + '\"', or value.toString(), or getShortClassName(value)
+     */
+    @JvmStatic
+    fun repr(value: Any?, typeOnly: Boolean): String {
+        if (value == null) return "null"
+        if (value is String) return "\"$value\""
+        if (typeOnly) {
+            return getShortClassName(value)
+        }
+        if (value is Array<*>) return toString(value)
+        if (value is ByteArray) return toHexString(value)
+        return value.toString()
+    }
+
+    @JvmStatic
+    fun toString(items: Array<*>?): String {
+        val sb = StringBuilder()
+        if (items == null) {
+            sb.append("null")
+        } else {
+            sb.append('[')
+            for (i in items.indices) {
+                if (i != 0) {
+                    sb.append(", ")
+                }
+                val item = items[i]
+                sb.append(repr(item))
+            }
+            sb.append(']')
+        }
+        return sb.toString()
+    }
+
+    @JvmStatic
+    fun toHexString(value: String) = toHexString(value.toByteArray())
+
+    @JvmStatic
+    fun toHexString(bytes: ByteArray?) = toHexString(bytes, true)
+
+    @JvmStatic
+    fun toHexString(bytes: ByteArray?, asByteArray: Boolean) =
+        if (bytes == null) "null" else toHexString(bytes, 0, bytes.size, asByteArray)
+
+    @JvmStatic
+    fun toHexString(bytes: ByteArray?, offset: Int, count: Int) = toHexString(bytes, offset, count, true)
+
+    @JvmStatic
+    fun toHexString(bytes: ByteArray?, offset: Int, count: Int, asByteArray: Boolean): String {
+        if (bytes == null) {
+            return "null"
+        }
+        val hexChars = charArrayOf('0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F')
+        val sb = java.lang.StringBuilder()
+        if (asByteArray) {
+            for (i in offset until count) {
+                if (i != offset) {
+                    sb.append('-')
+                }
+                sb.append(hexChars[(0x000000f0 and bytes[i].toInt()) shr 4])
+                sb.append(hexChars[(0x0000000f and bytes[i].toInt())])
+            }
+        } else {
+            for (i in count - 1 downTo 0) {
+                sb.append(hexChars[(0x000000f0 and bytes[i].toInt()) shr 4])
+                sb.append(hexChars[(0x0000000f and bytes[i].toInt())])
+            }
+        }
+        return sb.toString()
     }
 
     //
@@ -276,5 +448,17 @@ object Utils {
             ScanSettings.CALLBACK_TYPE_ALL_MATCHES -> "CALLBACK_TYPE_ALL_MATCHES"
             else -> "CALLBACK_TYPE_UNKNOWN"
         } + "($callbackType)"
+    }
+
+    //
+    //
+    //
+
+    fun macAddressStringToStrippedLowerCaseString(macAddress: String?): String {
+        return (macAddress ?: "00:00:00:00:00:00").replace(":", "").toLowerCase(Locale.ROOT)
+    }
+
+    fun macAddressStringToLong(macAddress: String?): Long {
+        return java.lang.Long.parseLong(macAddressStringToStrippedLowerCaseString(macAddress), 16)
     }
 }

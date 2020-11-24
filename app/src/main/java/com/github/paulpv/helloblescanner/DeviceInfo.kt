@@ -1,19 +1,18 @@
 package com.github.paulpv.helloblescanner
 
-import android.bluetooth.le.ScanResult
 import android.util.Log
 
 data class DeviceInfo(
-        val macAddress: String,
-        val name: String,
-        val modelNumber: Int,
-        val signalStrengthRealtime: Int,
-        val signalStrengthSmoothed: Int,
-        val addedElapsedMillis: Long,
-        val lastUpdatedElapsedMillis: Long,
-        val timeoutRemainingMillis: Long,
-        val isClicked: Boolean,
-        val batteryPercent: Int
+    var macAddress: String,
+    var name: String,
+    //val modelNumber: Int,
+    var rssiRealtime: Int,
+    //val rssiSmoothed: Int,
+    //val addedElapsedMillis: Long,
+    //val lastUpdatedElapsedMillis: Long,
+    //val timeoutRemainingMillis: Long,
+    //val isClicked: Boolean,
+    //val batteryPercent: Int
 ) {
     companion object {
         private val TAG = "DeviceInfo"
@@ -21,10 +20,35 @@ data class DeviceInfo(
         //private val deviceInfoPool = ArrayQueue<DeviceInfo>("DeviceInfoPool")
 
         /**
-         * NOTE:(pv) Is is possible for device.name to return null even though the scan says otherwise
+         * NOTE:(pv) It is possible for device.name to return null even though the scan says otherwise
          * @return scanResult.device.name or scanResult.scanRecord.deviceName or device.address
          */
-        fun getDeviceName(scanResult: ScanResult): String {
+        fun getDeviceName(scanResult: android.bluetooth.le.ScanResult): String {
+            val device = scanResult.device
+            var deviceName: String? = device.name
+            if (deviceName != null) {
+                return deviceName
+            }
+            Log.w(TAG, "getDeviceName: UNEXPECTED scanResult.device.name == null")
+            val scanRecord = scanResult.scanRecord
+            if (scanRecord != null) {
+                deviceName = scanRecord.deviceName
+                if (deviceName != null) {
+                    return deviceName
+                }
+                Log.w(TAG, "getDeviceName: UNEXPECTED scanResult.scanRecord.deviceName == null")
+            } else {
+                Log.w(TAG, "getDeviceName: UNEXPECTED scanResult.scanRecord == null")
+            }
+            deviceName = "{${device.address}}"
+            return deviceName
+        }
+
+        /**
+         * NOTE:(pv) It is possible for device.name to return null even though the scan says otherwise
+         * @return scanResult.device.name or scanResult.scanRecord.deviceName or device.address
+         */
+        fun getDeviceName(scanResult: no.nordicsemi.android.support.v18.scanner.ScanResult): String {
             val device = scanResult.device
             var deviceName: String? = device.name
             if (deviceName != null) {
@@ -114,6 +138,11 @@ data class DeviceInfo(
         */
     }
 
+    fun update(name: String, rssi: Int) {
+        this.name = name
+        this.rssiRealtime = rssi
+    }
+
     /**
      * The default Kotlin impl does not show the hashCode address; this one does.
      */
@@ -121,12 +150,12 @@ data class DeviceInfo(
         return Utils.getShortClassName(this) + "@" + Integer.toHexString(hashCode()) + "(" +
                 "macAddress=$macAddress" +
                 ", name=$name" +
-                ", modelNumber=$modelNumber" +
-                ", signalStrengthRealtime=$signalStrengthRealtime" +
-                ", signalStrengthSmoothed=$signalStrengthSmoothed" +
-                ", addedElapsedMillis=$addedElapsedMillis" +
-                ", lastUpdatedElapsedMillis=$lastUpdatedElapsedMillis" +
-                ", timeoutRemainingMillis=$timeoutRemainingMillis" +
+                //", modelNumber=$modelNumber" +
+                ", rssiRealtime=$rssiRealtime" +
+                //", rssiSmoothed=$rssiSmoothed" +
+                //", addedElapsedMillis=$addedElapsedMillis" +
+                //", lastUpdatedElapsedMillis=$lastUpdatedElapsedMillis" +
+                //", timeoutRemainingMillis=$timeoutRemainingMillis" +
                 ")"
     }
 }

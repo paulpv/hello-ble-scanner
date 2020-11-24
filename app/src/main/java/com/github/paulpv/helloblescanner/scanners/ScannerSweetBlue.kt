@@ -2,6 +2,8 @@ package com.github.paulpv.helloblescanner.scanners
 
 import android.content.Context
 import android.util.Log
+import com.github.paulpv.helloblescanner.DeviceInfo
+import com.github.paulpv.helloblescanner.Utils
 import com.idevicesinc.sweetblue.*
 import com.idevicesinc.sweetblue.utils.Interval
 
@@ -11,15 +13,18 @@ import com.idevicesinc.sweetblue.utils.Interval
  */
 class ScannerSweetBlue(
     applicationContext: Context,
-    nativeScanFilters: List<android.bluetooth.le.ScanFilter>,
-    nativeScanSettings: android.bluetooth.le.ScanSettings
-) : ScannerAbstract(applicationContext) {
+    callbacks: Callbacks,
+    scanFiltersNative: List<android.bluetooth.le.ScanFilter>,
+    scanSettingsNative: android.bluetooth.le.ScanSettings
+) : ScannerAbstract(applicationContext, callbacks) {
     companion object {
-        private const val TAG = "ScannerSweetBlue"
+        private val TAG = Utils.TAG(ScannerSweetBlue::class)
     }
 
+    private val recentlyNearbyDevices = mutableMapOf<String, DeviceInfo>()
+
     private val manager: BleManager
-    private val scanFilter: MyScanFilter
+    private val scanFilterSweetBlue: MyScanFilter
 
     init {
         val config = BleManagerConfig()
@@ -31,7 +36,7 @@ class ScannerSweetBlue(
             enableCrashResolver = true
             //loggingOptions = LogOptions(LogOptions.LogLevel.VERBOSE, LogOptions.LogLevel.VERBOSE)
             scanApi = BleScanApi.AUTO
-            scanPower = when (nativeScanSettings.scanMode) {
+            scanPower = when (scanSettingsNative.scanMode) {
                 BleScanPower.AUTO.nativeMode -> BleScanPower.AUTO // -1 SCAN_MODE_OPPORTUNISTIC
                 BleScanPower.VERY_LOW_POWER.nativeMode -> BleScanPower.VERY_LOW_POWER // -1 SCAN_MODE_OPPORTUNISTIC
                 BleScanPower.LOW_POWER.nativeMode -> BleScanPower.LOW_POWER // 0 SCAN_MODE_LOW_POWER
@@ -74,7 +79,7 @@ class ScannerSweetBlue(
 
         manager = BleManager.createInstance(applicationContext, config, apiKey)
 
-        scanFilter = MyScanFilter(nativeScanFilters)
+        scanFilterSweetBlue = MyScanFilter(scanFiltersNative)
     }
 
     override fun shutdown() {
@@ -129,19 +134,30 @@ class ScannerSweetBlue(
         }
     }
 
+    override fun clear() {
+        val it = manager.devices.iterator()
+        while (it.hasNext()) {
+            val device = it.next()
+            manager.removeDeviceFromCache(device)
+            onDeviceRemoved(device)
+        }
+    }
+
     override fun scanStart() {
         val options = ScanOptions()
 
-        if (!scanFilter.isEmpty()) {
-            options.withScanFilter(scanFilter)
+        if (!scanFilterSweetBlue.isEmpty()) {
+            options.withScanFilter(scanFilterSweetBlue)
         }
 
         options.withDiscoveryListener { onDiscoveryEvent(it) }
 
+        Log.i(TAG, "scanStart: startScan starting onDiscoveryEvent scan")
         manager.startScan(options)
     }
 
     override fun scanStop() {
+        Log.i(TAG, "scanStop: scanStop stopping onDiscoveryEvent scan")
         manager.stopScan()
     }
 
@@ -156,15 +172,27 @@ class ScannerSweetBlue(
         }
     }
 
-    private fun onDeviceAdded(device: BleDevice?) {
+    private fun onDeviceAdded(device: BleDevice) {
         Log.v(TAG, "onDeviceAdded($device)")
+        val macAddress = device.macAddress
+        val deviceInfo = DeviceInfo(macAddress, device.name_normalized, device.rssi)
+        recentlyNearbyDevices[macAddress] = deviceInfo
+        onDeviceAdded(deviceInfo)
     }
 
-    private fun onDeviceUpdated(device: BleDevice?) {
+    private fun onDeviceUpdated(device: BleDevice) {
         Log.v(TAG, "onDeviceUpdated($device)")
+        val macAddress = device.macAddress
+        val deviceInfo = recentlyNearbyDevices[macAddress] ?: return
+        deviceInfo.update(device.name_normalized, device.rssi)
+        recentlyNearbyDevices[macAddress] = deviceInfo
+        onDeviceUpdated(deviceInfo)
     }
 
-    private fun onDeviceRemoved(device: BleDevice?) {
+    private fun onDeviceRemoved(device: BleDevice) {
         Log.v(TAG, "onDeviceRemoved($device)")
+        val macAddress = device.macAddress
+        val deviceInfo = recentlyNearbyDevices.remove(macAddress) ?: return
+        onDeviceRemoved(deviceInfo)
     }
 }

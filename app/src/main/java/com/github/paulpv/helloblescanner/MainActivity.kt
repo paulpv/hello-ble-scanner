@@ -1,10 +1,12 @@
 package com.github.paulpv.helloblescanner
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.util.Log
 import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.widget.TextView
 import androidx.activity.result.contract.ActivityResultContracts
@@ -15,10 +17,11 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.MenuCompat
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.github.paulpv.helloblescanner.scanners.ScannerAbstract
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.activity_main.*
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), ScannerAbstract.Callbacks {
     companion object {
         private const val TAG = "MainActivity"
     }
@@ -40,7 +43,7 @@ class MainActivity : AppCompatActivity() {
             setSupportActionBar(toolbar)
         }
 
-        devicesAdapter = DevicesAdapter(this, SortBy.SignalLevelRssi)
+        devicesAdapter = DevicesAdapter(this, SortBy.Address)
         devicesAdapter.setEventListener(object : DevicesAdapter.EventListener<DeviceInfo> {
             override fun onItemSelected(item: DeviceInfo) = this@MainActivity.onItemSelected(item)
         })
@@ -86,6 +89,48 @@ class MainActivity : AppCompatActivity() {
         return true
     }
 
+    override fun onPrepareOptionsMenu(menu: Menu?): Boolean {
+        if (!super.onPrepareOptionsMenu(menu)) {
+            return false
+        }
+
+        val menuItem = menu?.findItem(
+            when (businessLogic.scannerType) {
+                MyBusinessLogic.ScannerTypes.Native -> R.id.action_scanner_type_native
+                MyBusinessLogic.ScannerTypes.Nordic -> R.id.action_scanner_type_nordic
+                MyBusinessLogic.ScannerTypes.SweetBlue -> R.id.action_scanner_type_sweetblue
+            }
+        )
+        if (menuItem != null) {
+            menuItem.isChecked = true
+        }
+
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        if (super.onOptionsItemSelected(item)) {
+            return true
+        }
+
+        var consume = true
+        when (item.itemId) {
+            R.id.action_scanner_type_native -> {
+                businessLogic.scannerType = MyBusinessLogic.ScannerTypes.Native
+            }
+            R.id.action_scanner_type_nordic -> {
+                businessLogic.scannerType = MyBusinessLogic.ScannerTypes.Nordic
+            }
+            R.id.action_scanner_type_sweetblue -> {
+                businessLogic.scannerType = MyBusinessLogic.ScannerTypes.SweetBlue
+            }
+            else -> {
+                consume = false
+            }
+        }
+        return consume
+    }
+
     //
     //
     //
@@ -128,6 +173,48 @@ class MainActivity : AppCompatActivity() {
             businessLogic.scanStop()
         }
     }
+
+    //
+    //
+    //
+
+    @SuppressLint("SetTextI18n")
+    private fun updateScanCount() {
+        //text_scan_count.text = "(${devicesAdapter!!.itemCount})"
+    }
+
+    override fun onScanningStarted() {
+        Log.v(TAG, "onScanningStarted()")
+    }
+
+    override fun onScanningStopped() {
+        Log.v(TAG, "onScanningStopped()")
+    }
+
+    override fun onDeviceAdded(deviceInfo: DeviceInfo) {
+        Log.v(TAG, "onDeviceAdded($deviceInfo)")
+        devicesAdapter.add(deviceInfo)
+        //val device = getDevice(item)
+        //device?.gattHandler?.addListener(gattHandlerListener)
+        updateScanCount()
+    }
+
+    override fun onDeviceUpdated(deviceInfo: DeviceInfo) {
+        Log.v(TAG, "onDeviceUpdated($deviceInfo)")
+        devicesAdapter.add(deviceInfo)
+    }
+
+    override fun onDeviceRemoved(deviceInfo: DeviceInfo) {
+        Log.v(TAG, "onDeviceRemoved($deviceInfo)")
+        devicesAdapter.remove(deviceInfo)
+        //val device = getDevice(item)
+        //device?.gattHandler?.removeListener(gattHandlerListener)
+        updateScanCount()
+    }
+
+    //
+    //
+    //
 
     private fun onItemSelected(item: DeviceInfo) {
         Log.i(TAG, "onItemSelected: item=$item")

@@ -2,126 +2,32 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    tools:context="com.pebblebee.bletool.testapp.MainActivity"
-    >
+    tools:context="com.pebblebee.bletool.testapp.MainActivity">
 
     <item
         android:id="@+id/action_toggle_scanning"
         android:title="@string/action_scan"
         app:actionLayout="@layout/toolbar_switch"
         app:showAsAction="always"
-        tools:ignore="AlwaysShowAction"
-        />
-
-    <item
-        android:id="@+id/action_clear"
-        android:title="@string/action_clear"
-        app:showAsAction="never"
-        />
+        tools:ignore="AlwaysShowAction" />
 
     <group
-        android:id="@+id/action_sortby"
+        android:id="@+id/action_scanner_type"
         android:checkableBehavior="single"
-        android:orderInCategory="200"
-        android:visible="true"
-        >
+        android:orderInCategory="100"
+        android:visible="true">
         <item
-            android:id="@+id/action_sortby_address"
-            android:title="@string/action_sortby_address"
-            app:showAsAction="never"
-            />
+            android:id="@+id/action_scanner_type_native"
+            android:title="ScannerNative"
+            app:showAsAction="never" />
         <item
-            android:id="@+id/action_sortby_name"
-            android:title="@string/action_sortby_name"
-            app:showAsAction="never"
-            />
+            android:id="@+id/action_scanner_type_nordic"
+            android:title="ScannerNordic"
+            app:showAsAction="never" />
         <item
-            android:id="@+id/action_sortby_signal_level_rssi"
-            android:title="@string/action_sortby_signal_level_rssi"
-            app:showAsAction="never"
-            />
-        <item
-            android:id="@+id/action_sortby_age"
-            android:title="@string/action_sortby_age"
-            app:showAsAction="never"
-            />
-        <item
-            android:id="@+id/action_sortby_timeout_remaining"
-            android:title="@string/action_sortby_timeout_remaining"
-            app:showAsAction="never"
-            />
+            android:id="@+id/action_scanner_type_sweetblue"
+            android:title="ScannerSweetBlue"
+            app:showAsAction="never" />
     </group>
-
-    <item
-        android:id="@+id/action_ringtone"
-        android:orderInCategory="300"
-        android:title="@string/select_ringtone"
-        app:showAsAction="never"
-        />
-
-    <group
-        android:id="@+id/action_debug_log"
-        android:orderInCategory="400">
-        <item
-            android:id="@+id/action_scan_settings"
-            android:orderInCategory="401"
-            android:title="Scan Settings"
-            app:showAsAction="never"
-            />
-
-        <item
-            android:id="@+id/action_use_scan_pending_intent"
-            android:orderInCategory="402"
-            android:title="Scan w/ PendingIntent"
-            app:showAsAction="never"
-            />
-
-        <item
-            android:id="@+id/action_log_parser"
-            android:orderInCategory="403"
-            android:title="Parser Log Enable"
-            app:showAsAction="never"
-            />
-
-        <item
-            android:id="@+id/action_debug_show_app_settings"
-            android:orderInCategory="404"
-            android:title="Show Application Settings"
-            app:showAsAction="never"
-            />
-
-        <item
-            android:id="@+id/action_debug_show_battery_info"
-            android:orderInCategory="405"
-            android:title="Show Battery Info"
-            app:showAsAction="never"
-            />
-
-        <item
-            android:id="@+id/action_debug_log_clear"
-            android:orderInCategory="406"
-            android:title="Debug Log: Clear"
-            app:showAsAction="never"
-            />
-
-        <item
-            android:id="@+id/action_debug_log_send"
-            android:orderInCategory="407"
-            android:title="Debug Log: Send"
-            app:showAsAction="never"
-            />
-    </group>
-
-    <group
-        android:id="@+id/action_debug_crash"
-        android:orderInCategory="1000">
-        <item
-            android:id="@+id/action_debug_crash_crash"
-            android:orderInCategory="1001"
-            android:title="!*DEBUG CRASH*!"
-            app:showAsAction="never"
-            android:visible="false"
-            />
-    </group>
-
+    
 </menu>

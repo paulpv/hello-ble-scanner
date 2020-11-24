@@ -8,6 +8,7 @@ import android.view.ViewGroup
 import androidx.annotation.LayoutRes
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.github.paulpv.helloblescanner.collections.SortedList
 import java.util.*
 
 class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView.Adapter<DevicesViewHolder>() {
@@ -19,7 +20,7 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
 
         private fun itemsToString(items: SortedList<DeviceInfo>): String {
             val sb = StringBuilder()
-                    .append('[')
+                .append('[')
             val size = items.size()
             for (i in 0 until size) {
                 sb.append('\n').append(i).append(' ').append(items.get(i)).append(", ")
@@ -28,7 +29,7 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
                 sb.append('\n')
             }
             return sb.append(']')
-                    .toString()
+                .toString()
         }
 
         private const val LOG_ADD = false
@@ -87,6 +88,7 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
             }
         }
 
+        /*
         private val SORT_BY_STRENGTH = object : Comparator<DeviceInfo> {
             override fun compare(o1: DeviceInfo, o2: DeviceInfo): Int {
                 @Suppress("ConstantConditionIf")
@@ -112,7 +114,9 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
                 return "SORT_BY_STRENGTH"
             }
         }
+        */
 
+        /*
         private val SORT_BY_AGE = object : Comparator<DeviceInfo> {
             override fun compare(o1: DeviceInfo, o2: DeviceInfo): Int {
                 @Suppress("ConstantConditionIf")
@@ -132,7 +136,9 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
                 return "SORT_BY_AGE"
             }
         }
+        */
 
+        /*
         private val SORT_BY_TIMEOUT_REMAINING = object : Comparator<DeviceInfo> {
             override fun compare(o1: DeviceInfo, o2: DeviceInfo): Int {
                 @Suppress("ConstantConditionIf")
@@ -152,14 +158,15 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
                 return "SORT_BY_TIMEOUT_REMAINING"
             }
         }
+        */
 
         private fun getComparator(sortBy: SortBy?, reversed: Boolean): Comparator<DeviceInfo> {
             val comparator: Comparator<DeviceInfo> = when (sortBy) {
                 SortBy.Address -> SORT_BY_ADDRESS
                 SortBy.Name -> SORT_BY_NAME
-                SortBy.SignalLevelRssi -> SORT_BY_STRENGTH
-                SortBy.Age -> SORT_BY_AGE
-                SortBy.TimeoutRemaining -> SORT_BY_TIMEOUT_REMAINING
+                //SortBy.SignalLevelRssi -> SORT_BY_STRENGTH
+                //SortBy.Age -> SORT_BY_AGE
+                //SortBy.TimeoutRemaining -> SORT_BY_TIMEOUT_REMAINING
                 else -> throw IllegalStateException("unhandled sortBy=$sortBy")
             }
             return if (reversed) Collections.reverseOrder(comparator) else comparator
@@ -226,185 +233,67 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
 
     init {
         itemViewOnClickListener = View.OnClickListener { this@DevicesAdapter.onItemClicked(it) }
-        items = SortedList(DeviceInfo::class.java, object : SortedList.SortedListAdapterCallback<DeviceInfo>(this) {
-            override fun compare(o1: DeviceInfo?, o2: DeviceInfo?): Int {
-                return getComparator(
+        items = SortedList(
+            DeviceInfo::class.java,
+            object :
+                SortedList.SortedListAdapterCallback<DeviceInfo>(
+                    this
+                ) {
+                override fun compare(o1: DeviceInfo?, o2: DeviceInfo?): Int {
+                    return getComparator(
                         sortBy,
                         sortReversed
-                ).compare(o1, o2)
-            }
-
-            /*
-            override fun getComparators(): Array<out Comparator<DeviceInfo>>? {
-                return this@DevicesAdapter.comparators
-            }
-            */
-
-            override fun areItemsTheSame(item1: DeviceInfo?, item2: DeviceInfo?): Boolean {
-                //Log.e(TAG, "areItemsTheSame: item1=$item1")
-                //Log.e(TAG, "areItemsTheSame: item2=$item2")
-                @Suppress("UnnecessaryVariable") val result = item1!!.macAddress == item2!!.macAddress
-                //Log.e(TAG, "areItemsTheSame: result=$result")
-                return result
-            }
-
-            override fun areContentsTheSame(oldItem: DeviceInfo?, newItem: DeviceInfo?): Boolean {
-                //Log.e(TAG, "areContentsTheSame: oldItem=$oldItem")
-                //Log.e(TAG, "areContentsTheSame: newItem=$newItem")
-                @Suppress("UnnecessaryVariable") val result = oldItem == newItem
-                //val result = oldItem!!.equals(newItem)
-                //Log.e(TAG, "areContentsTheSame: result=$result")
-                return result
-            }
-
-            override fun onInserted(position: Int, count: Int) {
-                @Suppress("ConstantConditionIf")
-                if (LOG_INSERTED) {
-                    Log.e(TAG, "onInserted(position=$position, count=$count)")
-
-                    Log.e(TAG, "onInserted: items($itemCount)=${itemsToString(items)}")
-
-                    Log.e(TAG, "onInserted: BEFORE itemsMacAddressToIndex=$itemsMacAddressToIndex")
-                    Log.e(TAG, "onInserted: BEFORE itemsIndexToMacAddress=$itemsIndexToMacAddress")
+                    ).compare(o1, o2)
                 }
 
-                for (i in position until position + count) {
-                    val item = getItemByIndex(i)
-                    val macAddress = item.macAddress
+                /*
+                override fun getComparators(): Array<out Comparator<DeviceInfo>>? {
+                    return this@DevicesAdapter.comparators
+                }
+                */
+
+                override fun areItemsTheSame(item1: DeviceInfo?, item2: DeviceInfo?): Boolean {
+                    //Log.e(TAG, "areItemsTheSame: item1=$item1")
+                    //Log.e(TAG, "areItemsTheSame: item2=$item2")
+                    @Suppress("UnnecessaryVariable") val result = item1!!.macAddress == item2!!.macAddress
+                    //Log.e(TAG, "areItemsTheSame: result=$result")
+                    return result
+                }
+
+                override fun areContentsTheSame(oldItem: DeviceInfo?, newItem: DeviceInfo?): Boolean {
+                    //Log.e(TAG, "areContentsTheSame: oldItem=$oldItem")
+                    //Log.e(TAG, "areContentsTheSame: newItem=$newItem")
+                    @Suppress("UnnecessaryVariable") val result = oldItem == newItem
+                    //val result = oldItem!!.equals(newItem)
+                    //Log.e(TAG, "areContentsTheSame: result=$result")
+                    return result
+                }
+
+                override fun onInserted(position: Int, count: Int) {
                     @Suppress("ConstantConditionIf")
                     if (LOG_INSERTED) {
-                        Log.e(TAG, "onInserted: macAddress=$macAddress, position=$i")
+                        Log.e(TAG, "onInserted(position=$position, count=$count)")
+
+                        Log.e(TAG, "onInserted: items($itemCount)=${itemsToString(items)}")
+
+                        Log.e(TAG, "onInserted: BEFORE itemsMacAddressToIndex=$itemsMacAddressToIndex")
+                        Log.e(TAG, "onInserted: BEFORE itemsIndexToMacAddress=$itemsIndexToMacAddress")
                     }
 
-                    // Insert the item; items to the end are shifted one to the right
-                    @Suppress("ConstantConditionIf")
-                    if (LOG_INSERTED) {
-                        Log.e(TAG, "onInserted: itemsIndexToMacAddress.add($i, $macAddress)")
-                    }
-                    itemsIndexToMacAddress.add(i, macAddress)
-                }
-
-                // Readjust the dictionary for the shifted items only
-                val size = itemsIndexToMacAddress.size
-                for (i in position until size) {
-                    @Suppress("NAME_SHADOWING") val macAddress = itemsIndexToMacAddress[i]
-                    @Suppress("ConstantConditionIf")
-                    if (LOG_INSERTED) {
-                        Log.e(TAG, "onInserted: itemsMacAddressToIndex[$macAddress] = $i")
-                    }
-                    itemsMacAddressToIndex[macAddress] = i
-                }
-
-                @Suppress("ConstantConditionIf")
-                if (LOG_INSERTED) {
-                    Log.e(TAG, "onInserted:  AFTER itemsMacAddressToIndex=$itemsMacAddressToIndex")
-                    Log.e(TAG, "onInserted:  AFTER itemsIndexToMacAddress=$itemsIndexToMacAddress")
-                }
-
-                super.onInserted(position, count)
-            }
-
-            override fun onMoved(fromPosition: Int, toPosition: Int) {
-                @Suppress("ConstantConditionIf")
-                if (LOG_MOVED) {
-                    Log.e(TAG, "onMoved(fromPosition=$fromPosition, toPosition=$toPosition)")
-                }
-
-                val item = getItemByIndex(toPosition)
-                val macAddress = item.macAddress
-
-                @Suppress("ConstantConditionIf")
-                if (LOG_MOVED) {
-                    Log.e(TAG, "onMoved: items($itemCount)=${itemsToString(items)}")
-
-                    Log.e(TAG, "onMoved: macAddress=$macAddress, fromPosition=$fromPosition, toPosition=$toPosition")
-
-                    Log.e(TAG, "onMoved: BEFORE itemsMacAddressToIndex=$itemsMacAddressToIndex")
-                    Log.e(TAG, "onMoved: BEFORE itemsIndexToMacAddress=$itemsIndexToMacAddress")
-                }
-
-                @Suppress("ConstantConditionIf")
-                if (LOG_MOVED) {
-                    Log.e(TAG, "onMoved: itemsIndexToMacAddress.removeAt($fromPosition)")
-                }
-                itemsIndexToMacAddress.removeAt(fromPosition)
-
-                @Suppress("ConstantConditionIf")
-                if (LOG_MOVED) {
-                    Log.e(TAG, "onMoved: itemsIndexToMacAddress.add($toPosition, $macAddress)")
-                }
-                itemsIndexToMacAddress.add(toPosition, macAddress)
-
-                // Item could have moved from left to right or right to left
-                // Readjust the dictionary for the shifted items only
-                if (fromPosition < toPosition) {
-                    @Suppress("ConstantConditionIf")
-                    if (LOG_MOVED) {
-                        Log.e(TAG, "onMoved: left ($fromPosition) -> right ($toPosition)")
-                    }
-                    // Item moved left to right: items from old position to new position are shifted left one position
-                    // Readjust the dictionary for the shifted items only
-                    for (i in fromPosition until toPosition + 1) {
-                        @Suppress("NAME_SHADOWING") val macAddress = itemsIndexToMacAddress[i]
+                    for (i in position until position + count) {
+                        val item = getItemByIndex(i)
+                        val macAddress = item.macAddress
                         @Suppress("ConstantConditionIf")
-                        if (LOG_MOVED) {
-                            Log.e(TAG, "onMoved: itemsMacAddressToIndex[$macAddress] = $i")
+                        if (LOG_INSERTED) {
+                            Log.e(TAG, "onInserted: macAddress=$macAddress, position=$i")
                         }
-                        itemsMacAddressToIndex[macAddress] = i
-                    }
-                } else { // fromPosition > toPosition
-                    @Suppress("ConstantConditionIf")
-                    if (LOG_MOVED) {
-                        Log.e(TAG, "onMoved: left ($toPosition) <- right ($fromPosition)")
-                    }
-                    // Item moved right to left: items from new position to old position are shifted right one position
-                    for (i in toPosition until fromPosition + 1) {
-                        @Suppress("NAME_SHADOWING") val macAddress = itemsIndexToMacAddress[i]
+
+                        // Insert the item; items to the end are shifted one to the right
                         @Suppress("ConstantConditionIf")
-                        if (LOG_MOVED) {
-                            Log.e(TAG, "onMoved: itemsMacAddressToIndex[$macAddress] = $i")
+                        if (LOG_INSERTED) {
+                            Log.e(TAG, "onInserted: itemsIndexToMacAddress.add($i, $macAddress)")
                         }
-                        itemsMacAddressToIndex[macAddress] = i
-                    }
-                }
-
-                @Suppress("ConstantConditionIf")
-                if (LOG_MOVED) {
-                    Log.e(TAG, "onMoved:  AFTER itemsMacAddressToIndex=$itemsMacAddressToIndex")
-                    Log.e(TAG, "onMoved:  AFTER itemsIndexToMacAddress=$itemsIndexToMacAddress")
-                }
-
-                super.onMoved(fromPosition, toPosition)
-            }
-
-            override fun onRemoved(position: Int, count: Int) {
-                @Suppress("ConstantConditionIf")
-                if (LOG_REMOVED) {
-                    Log.e(TAG, "onRemoved(position=$position, count=$count)")
-                }
-
-                if (position >= 0 && position < itemsIndexToMacAddress.size) {
-                    @Suppress("ConstantConditionIf")
-                    if (LOG_REMOVED) {
-                        Log.e(TAG, "onRemoved: items($itemCount)=${itemsToString(items)}")
-
-                        Log.e(TAG, "onRemoved: BEFORE itemsMacAddressToIndex=$itemsMacAddressToIndex")
-                        Log.e(TAG, "onRemoved: BEFORE itemsIndexToMacAddress=$itemsIndexToMacAddress")
-                    }
-
-                    // Delete the item; items to the end are shifted one to the left
-                    for (i in 0 until count) {
-                        @Suppress("ConstantConditionIf")
-                        if (LOG_REMOVED) {
-                            Log.e(TAG, "onRemoved: itemsIndexToMacAddress.removeAt($position)")
-                        }
-                        val macAddress = itemsIndexToMacAddress.removeAt(position)
-
-                        @Suppress("ConstantConditionIf")
-                        if (LOG_REMOVED) {
-                            Log.e(TAG, "onRemoved: itemsMacAddressToIndex.remove($macAddress)")
-                        }
-                        itemsMacAddressToIndex.remove(macAddress)
+                        itemsIndexToMacAddress.add(i, macAddress)
                     }
 
                     // Readjust the dictionary for the shifted items only
@@ -412,22 +301,145 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
                     for (i in position until size) {
                         @Suppress("NAME_SHADOWING") val macAddress = itemsIndexToMacAddress[i]
                         @Suppress("ConstantConditionIf")
-                        if (LOG_REMOVED) {
-                            Log.e(TAG, "onRemoved: itemsMacAddressToIndex[$macAddress] = $i")
+                        if (LOG_INSERTED) {
+                            Log.e(TAG, "onInserted: itemsMacAddressToIndex[$macAddress] = $i")
                         }
                         itemsMacAddressToIndex[macAddress] = i
                     }
 
                     @Suppress("ConstantConditionIf")
-                    if (LOG_REMOVED) {
-                        Log.e(TAG, "onRemoved:  AFTER itemsMacAddressToIndex=$itemsMacAddressToIndex")
-                        Log.e(TAG, "onRemoved:  AFTER itemsIndexToMacAddress=$itemsIndexToMacAddress")
+                    if (LOG_INSERTED) {
+                        Log.e(TAG, "onInserted:  AFTER itemsMacAddressToIndex=$itemsMacAddressToIndex")
+                        Log.e(TAG, "onInserted:  AFTER itemsIndexToMacAddress=$itemsIndexToMacAddress")
                     }
+
+                    super.onInserted(position, count)
                 }
 
-                super.onRemoved(position, count)
-            }
-        })
+                override fun onMoved(fromPosition: Int, toPosition: Int) {
+                    @Suppress("ConstantConditionIf")
+                    if (LOG_MOVED) {
+                        Log.e(TAG, "onMoved(fromPosition=$fromPosition, toPosition=$toPosition)")
+                    }
+
+                    val item = getItemByIndex(toPosition)
+                    val macAddress = item.macAddress
+
+                    @Suppress("ConstantConditionIf")
+                    if (LOG_MOVED) {
+                        Log.e(TAG, "onMoved: items($itemCount)=${itemsToString(items)}")
+
+                        Log.e(TAG, "onMoved: macAddress=$macAddress, fromPosition=$fromPosition, toPosition=$toPosition")
+
+                        Log.e(TAG, "onMoved: BEFORE itemsMacAddressToIndex=$itemsMacAddressToIndex")
+                        Log.e(TAG, "onMoved: BEFORE itemsIndexToMacAddress=$itemsIndexToMacAddress")
+                    }
+
+                    @Suppress("ConstantConditionIf")
+                    if (LOG_MOVED) {
+                        Log.e(TAG, "onMoved: itemsIndexToMacAddress.removeAt($fromPosition)")
+                    }
+                    itemsIndexToMacAddress.removeAt(fromPosition)
+
+                    @Suppress("ConstantConditionIf")
+                    if (LOG_MOVED) {
+                        Log.e(TAG, "onMoved: itemsIndexToMacAddress.add($toPosition, $macAddress)")
+                    }
+                    itemsIndexToMacAddress.add(toPosition, macAddress)
+
+                    // Item could have moved from left to right or right to left
+                    // Readjust the dictionary for the shifted items only
+                    if (fromPosition < toPosition) {
+                        @Suppress("ConstantConditionIf")
+                        if (LOG_MOVED) {
+                            Log.e(TAG, "onMoved: left ($fromPosition) -> right ($toPosition)")
+                        }
+                        // Item moved left to right: items from old position to new position are shifted left one position
+                        // Readjust the dictionary for the shifted items only
+                        for (i in fromPosition until toPosition + 1) {
+                            @Suppress("NAME_SHADOWING") val macAddress = itemsIndexToMacAddress[i]
+                            @Suppress("ConstantConditionIf")
+                            if (LOG_MOVED) {
+                                Log.e(TAG, "onMoved: itemsMacAddressToIndex[$macAddress] = $i")
+                            }
+                            itemsMacAddressToIndex[macAddress] = i
+                        }
+                    } else { // fromPosition > toPosition
+                        @Suppress("ConstantConditionIf")
+                        if (LOG_MOVED) {
+                            Log.e(TAG, "onMoved: left ($toPosition) <- right ($fromPosition)")
+                        }
+                        // Item moved right to left: items from new position to old position are shifted right one position
+                        for (i in toPosition until fromPosition + 1) {
+                            @Suppress("NAME_SHADOWING") val macAddress = itemsIndexToMacAddress[i]
+                            @Suppress("ConstantConditionIf")
+                            if (LOG_MOVED) {
+                                Log.e(TAG, "onMoved: itemsMacAddressToIndex[$macAddress] = $i")
+                            }
+                            itemsMacAddressToIndex[macAddress] = i
+                        }
+                    }
+
+                    @Suppress("ConstantConditionIf")
+                    if (LOG_MOVED) {
+                        Log.e(TAG, "onMoved:  AFTER itemsMacAddressToIndex=$itemsMacAddressToIndex")
+                        Log.e(TAG, "onMoved:  AFTER itemsIndexToMacAddress=$itemsIndexToMacAddress")
+                    }
+
+                    super.onMoved(fromPosition, toPosition)
+                }
+
+                override fun onRemoved(position: Int, count: Int) {
+                    @Suppress("ConstantConditionIf")
+                    if (LOG_REMOVED) {
+                        Log.e(TAG, "onRemoved(position=$position, count=$count)")
+                    }
+
+                    if (position >= 0 && position < itemsIndexToMacAddress.size) {
+                        @Suppress("ConstantConditionIf")
+                        if (LOG_REMOVED) {
+                            Log.e(TAG, "onRemoved: items($itemCount)=${itemsToString(items)}")
+
+                            Log.e(TAG, "onRemoved: BEFORE itemsMacAddressToIndex=$itemsMacAddressToIndex")
+                            Log.e(TAG, "onRemoved: BEFORE itemsIndexToMacAddress=$itemsIndexToMacAddress")
+                        }
+
+                        // Delete the item; items to the end are shifted one to the left
+                        for (i in 0 until count) {
+                            @Suppress("ConstantConditionIf")
+                            if (LOG_REMOVED) {
+                                Log.e(TAG, "onRemoved: itemsIndexToMacAddress.removeAt($position)")
+                            }
+                            val macAddress = itemsIndexToMacAddress.removeAt(position)
+
+                            @Suppress("ConstantConditionIf")
+                            if (LOG_REMOVED) {
+                                Log.e(TAG, "onRemoved: itemsMacAddressToIndex.remove($macAddress)")
+                            }
+                            itemsMacAddressToIndex.remove(macAddress)
+                        }
+
+                        // Readjust the dictionary for the shifted items only
+                        val size = itemsIndexToMacAddress.size
+                        for (i in position until size) {
+                            @Suppress("NAME_SHADOWING") val macAddress = itemsIndexToMacAddress[i]
+                            @Suppress("ConstantConditionIf")
+                            if (LOG_REMOVED) {
+                                Log.e(TAG, "onRemoved: itemsMacAddressToIndex[$macAddress] = $i")
+                            }
+                            itemsMacAddressToIndex[macAddress] = i
+                        }
+
+                        @Suppress("ConstantConditionIf")
+                        if (LOG_REMOVED) {
+                            Log.e(TAG, "onRemoved:  AFTER itemsMacAddressToIndex=$itemsMacAddressToIndex")
+                            Log.e(TAG, "onRemoved:  AFTER itemsIndexToMacAddress=$itemsIndexToMacAddress")
+                        }
+                    }
+
+                    super.onRemoved(position, count)
+                }
+            })
 
         //
         // lateinit to create comparators
@@ -468,8 +480,8 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
         //Log.e(TAG, "onCreateViewHolder(...)")
         val viewGroup = inflate(R.layout.device_cell, parent) as ViewGroup
         return DevicesViewHolder(
-                context,
-                viewGroup
+            context,
+            viewGroup
         )
     }
 
@@ -549,10 +561,7 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
         return index
     }
 
-    /*
-    fun add(item: ExpiringIterableLongSparseArray.ItemWrapper<BleScanResult>, bleDevice: BleDevice?): Int {
-        val deviceInfo = DeviceInfo.newInstance(item, bleDevice)
-
+    fun add(deviceInfo: DeviceInfo): Int {
         @Suppress("ConstantConditionIf")
         if (LOG_ADD) {
             Log.e(TAG, "\n\n")
@@ -608,12 +617,8 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
             return indexAdded
         }
     }
-    */
 
-    /*
-    fun remove(item: ExpiringIterableLongSparseArray.ItemWrapper<BleScanResult>, bleDevice: BleDevice?): Boolean {
-        val deviceInfo = DeviceInfo.newInstance(item, bleDevice)
-
+    fun remove(deviceInfo: DeviceInfo): Boolean {
         @Suppress("ConstantConditionIf")
         if (LOG_REMOVE) {
             Log.e(TAG, "\n\n")
@@ -636,7 +641,6 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
 
         return removed
     }
-    */
 
     //
     //
@@ -677,7 +681,10 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
                 val itemCount = 1 + positionStop - positionStart
                 @Suppress("ConstantConditionIf")
                 if (LOG_AUTO_UPDATE) {
-                    Log.e(TAG, "refreshVisibleItems: positionStart=$positionStart, positionStop=$positionStop, itemCount=$itemCount")
+                    Log.e(
+                        TAG,
+                        "refreshVisibleItems: positionStart=$positionStart, positionStop=$positionStop, itemCount=$itemCount"
+                    )
                     Log.e(TAG, "refreshVisibleItems: notifyItemRangeChanged($positionStart, $itemCount)")
                 }
                 notifyItemRangeChanged(positionStart, itemCount)

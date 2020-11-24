@@ -27,16 +27,16 @@ class DevicesViewHolder(val context: Context, itemView: ViewGroup) :
     @SuppressLint("SetTextI18n")
     override fun bindTo(item: DeviceInfo, clickListener: OnClickListener) {
         super.bindTo(item, clickListener)
-        val backgroundColor = if (item.isClicked) R.color.colorDeviceCellClicked else R.color.colorDeviceCell
-        groupDeviceCell.setBackgroundColor(Utils.getColor(context, backgroundColor))
+        //val backgroundColor = if (item.isClicked) R.color.colorDeviceCellClicked else R.color.colorDeviceCell
+        //groupDeviceCell.setBackgroundColor(Utils.getColor(context, backgroundColor))
         labelAddress.text = item.macAddress
-        labelAge.text = "age=${Utils.getTimeDurationFormattedString(item.addedElapsedMillis)}"
-        labelLastSeen.text = "seen=${Utils.getTimeDurationFormattedString(item.lastUpdatedElapsedMillis, TimeUnit.MINUTES)}"
-        labelTimeoutRemaining.text = "remain=${Utils.getTimeDurationFormattedString(item.timeoutRemainingMillis, TimeUnit.MINUTES)}"
+        //labelAge.text = "age=${Utils.getTimeDurationFormattedString(item.addedElapsedMillis)}"
+        //labelLastSeen.text = "seen=${Utils.getTimeDurationFormattedString(item.lastUpdatedElapsedMillis, TimeUnit.MINUTES)}"
+        //labelTimeoutRemaining.text = "remain=${Utils.getTimeDurationFormattedString(item.timeoutRemainingMillis, TimeUnit.MINUTES)}"
         labelName.text = item.name
         val locale = Locale.getDefault()
-        labelRssiReal.text = String.format(locale, "real=%04d", item.signalStrengthRealtime)
-        labelRssiAverage.text = String.format(locale, "avg=%04d", item.signalStrengthSmoothed)
-        labelBatteryPercent.text = String.format(locale, "batt= %02d%%", item.batteryPercent)
+        labelRssiReal.text = String.format(locale, "real=%04d", item.rssiRealtime)
+        //labelRssiAverage.text = String.format(locale, "avg=%04d", item.rssiSmoothed)
+        //labelBatteryPercent.text = String.format(locale, "batt= %02d%%", item.batteryPercent)
     }
 }
