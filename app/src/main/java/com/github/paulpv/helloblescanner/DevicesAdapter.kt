@@ -18,7 +18,7 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
         private const val AUTO_UPDATE_ENABLE = false
         private const val LOG_AUTO_UPDATE = true
 
-        private fun itemsToString(items: SortedList<DeviceInfo>): String {
+        private fun itemsToString(items: SortedList<BleScanResult>): String {
             val sb = StringBuilder()
                 .append('[')
             val size = items.size()
@@ -48,8 +48,8 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
         private const val LOG_SORT_BY_AGE = false
         private const val LOG_SORT_BY_TIMEOUT_REMAINING = false
 
-        private val SORT_BY_ADDRESS = object : Comparator<DeviceInfo> {
-            override fun compare(o1: DeviceInfo, o2: DeviceInfo): Int {
+        private val SORT_BY_ADDRESS = object : Comparator<BleScanResult> {
+            override fun compare(o1: BleScanResult, o2: BleScanResult): Int {
                 @Suppress("ConstantConditionIf")
                 if (LOG_SORT_BY_ADDRESS) {
                     Log.e(TAG, "SORT_BY_ADDRESS o1=$o1")
@@ -68,8 +68,8 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
             }
         }
 
-        private val SORT_BY_NAME = object : Comparator<DeviceInfo> {
-            override fun compare(o1: DeviceInfo, o2: DeviceInfo): Int {
+        private val SORT_BY_NAME = object : Comparator<BleScanResult> {
+            override fun compare(o1: BleScanResult, o2: BleScanResult): Int {
                 @Suppress("ConstantConditionIf")
                 if (LOG_SORT_BY_NAME) {
                     Log.e(TAG, "SORT_BY_NAME o1=$o1")
@@ -160,8 +160,8 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
         }
         */
 
-        private fun getComparator(sortBy: SortBy?, reversed: Boolean): Comparator<DeviceInfo> {
-            val comparator: Comparator<DeviceInfo> = when (sortBy) {
+        private fun getComparator(sortBy: SortBy?, reversed: Boolean): Comparator<BleScanResult> {
+            val comparator: Comparator<BleScanResult> = when (sortBy) {
                 SortBy.Address -> SORT_BY_ADDRESS
                 SortBy.Name -> SORT_BY_NAME
                 //SortBy.SignalLevelRssi -> SORT_BY_STRENGTH
@@ -181,7 +181,7 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
     private val itemViewOnClickListener: View.OnClickListener
     private val itemsMacAddressToIndex = mutableMapOf<String, Int>()
     private val itemsIndexToMacAddress = mutableListOf<String>()
-    private lateinit var items: SortedList<DeviceInfo>
+    private lateinit var items: SortedList<BleScanResult>
 
     //private lateinit var comparators: Array<out Comparator<DeviceInfo>>
 
@@ -216,7 +216,7 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
 
             // TODO:(pv) Tweak copied SortedList allow manually resorting existing items
             // Until then, rebuild the list by removing all items and then adding them back
-            val temp = mutableListOf<DeviceInfo>()
+            val temp = mutableListOf<BleScanResult>()
             items.beginBatchedUpdates()
             while (items.size() > 0) {
                 //Log.e(TAG, "items.removeItemAt(0)")
@@ -229,17 +229,17 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
             items.endBatchedUpdates()
         }
 
-    private var eventListener: EventListener<DeviceInfo>? = null
+    private var eventListener: EventListener<BleScanResult>? = null
 
     init {
         itemViewOnClickListener = View.OnClickListener { this@DevicesAdapter.onItemClicked(it) }
         items = SortedList(
-            DeviceInfo::class.java,
+            BleScanResult::class.java,
             object :
-                SortedList.SortedListAdapterCallback<DeviceInfo>(
+                SortedList.SortedListAdapterCallback<BleScanResult>(
                     this
                 ) {
-                override fun compare(o1: DeviceInfo?, o2: DeviceInfo?): Int {
+                override fun compare(o1: BleScanResult?, o2: BleScanResult?): Int {
                     return getComparator(
                         sortBy,
                         sortReversed
@@ -252,7 +252,7 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
                 }
                 */
 
-                override fun areItemsTheSame(item1: DeviceInfo?, item2: DeviceInfo?): Boolean {
+                override fun areItemsTheSame(item1: BleScanResult?, item2: BleScanResult?): Boolean {
                     //Log.e(TAG, "areItemsTheSame: item1=$item1")
                     //Log.e(TAG, "areItemsTheSame: item2=$item2")
                     @Suppress("UnnecessaryVariable") val result = item1!!.macAddress == item2!!.macAddress
@@ -260,7 +260,7 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
                     return result
                 }
 
-                override fun areContentsTheSame(oldItem: DeviceInfo?, newItem: DeviceInfo?): Boolean {
+                override fun areContentsTheSame(oldItem: BleScanResult?, newItem: BleScanResult?): Boolean {
                     //Log.e(TAG, "areContentsTheSame: oldItem=$oldItem")
                     //Log.e(TAG, "areContentsTheSame: newItem=$newItem")
                     @Suppress("UnnecessaryVariable") val result = oldItem == newItem
@@ -460,7 +460,7 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
         return layoutInflater.inflate(resource, root, false)
     }
 
-    fun setEventListener(eventListener: EventListener<DeviceInfo>) {
+    fun setEventListener(eventListener: EventListener<BleScanResult>) {
         this.eventListener = eventListener
     }
 
@@ -495,7 +495,7 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
     //
     //
 
-    private fun getItemFromHolder(holder: BindableViewHolder<*>): DeviceInfo {
+    private fun getItemFromHolder(holder: BindableViewHolder<*>): BleScanResult {
         val adapterPosition = holder.adapterPosition
         val layoutPosition = holder.layoutPosition
         @Suppress("ConstantConditionIf")
@@ -507,7 +507,7 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
     }
 
     @Suppress("MemberVisibilityCanBePrivate")
-    fun getItemByIndex(index: Int): DeviceInfo {
+    fun getItemByIndex(index: Int): BleScanResult {
         @Suppress("ConstantConditionIf")
         if (LOG_GET_ITEM_BY_INDEX) {
             Log.e(TAG, "getItemByIndex($index)")
@@ -561,21 +561,21 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
         return index
     }
 
-    fun add(deviceInfo: DeviceInfo): Int {
+    fun add(scanResult: BleScanResult): Int {
         @Suppress("ConstantConditionIf")
         if (LOG_ADD) {
             Log.e(TAG, "\n\n")
             //Log.e(TAG, "add($item)")
-            Log.e(TAG, "add($deviceInfo)")
+            Log.e(TAG, "add($scanResult)")
             Log.e(TAG, "add: BEFORE items($itemCount)=${itemsToString(items)}")
         }
 
         if (false) {
             @Suppress("ConstantConditionIf")
             if (LOG_ADD) {
-                Log.e(TAG, "add: items.add($deviceInfo)")
+                Log.e(TAG, "add: items.add($scanResult)")
             }
-            val indexAdded = items.add(deviceInfo)
+            val indexAdded = items.add(scanResult)
             @Suppress("ConstantConditionIf")
             if (LOG_ADD) {
                 Log.e(TAG, "add: indexAdded=$indexAdded")
@@ -584,9 +584,9 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
         } else {
             @Suppress("ConstantConditionIf")
             if (LOG_ADD) {
-                Log.e(TAG, "add: indexExisting = findIndexByMacAddress(${deviceInfo.macAddress})")
+                Log.e(TAG, "add: indexExisting = findIndexByMacAddress(${scanResult.macAddress})")
             }
-            val indexExisting = findIndexByMacAddress(deviceInfo.macAddress)
+            val indexExisting = findIndexByMacAddress(scanResult.macAddress)
             @Suppress("ConstantConditionIf")
             if (LOG_ADD) {
                 Log.e(TAG, "add: indexExisting=$indexExisting")
@@ -595,16 +595,16 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
             val indexAdded = if (indexExisting == SortedList.INVALID_POSITION) {
                 @Suppress("ConstantConditionIf")
                 if (LOG_ADD) {
-                    Log.e(TAG, "add: items.add($deviceInfo)")
+                    Log.e(TAG, "add: items.add($scanResult)")
                 }
-                items.add(deviceInfo)
+                items.add(scanResult)
             } else {
                 @Suppress("ConstantConditionIf")
                 if (LOG_ADD) {
-                    Log.e(TAG, "add: items.updateItemAt($indexExisting, $deviceInfo)")
+                    Log.e(TAG, "add: items.updateItemAt($indexExisting, $scanResult)")
                 }
                 // NOTE:(pv) Only re-sorts if compare != 0 !!!
-                items.updateItemAt(indexExisting, deviceInfo)
+                items.updateItemAt(indexExisting, scanResult)
                 indexExisting
             }
 
@@ -618,20 +618,20 @@ class DevicesAdapter(var context: Context, initialSortBy: SortBy) : RecyclerView
         }
     }
 
-    fun remove(deviceInfo: DeviceInfo): Boolean {
+    fun remove(scanResult: BleScanResult): Boolean {
         @Suppress("ConstantConditionIf")
         if (LOG_REMOVE) {
             Log.e(TAG, "\n\n")
             //Log.e(TAG, "remove($item)")
-            Log.e(TAG, "remove($deviceInfo)")
+            Log.e(TAG, "remove($scanResult)")
             Log.e(TAG, "remove: BEFORE items($itemCount)=${itemsToString(items)}")
         }
 
         @Suppress("ConstantConditionIf")
         if (LOG_REMOVE) {
-            Log.e(TAG, "remove: items.remove($deviceInfo)")
+            Log.e(TAG, "remove: items.remove($scanResult)")
         }
-        val removed = items.remove(deviceInfo)
+        val removed = items.remove(scanResult)
 
         @Suppress("ConstantConditionIf")
         if (LOG_REMOVE) {

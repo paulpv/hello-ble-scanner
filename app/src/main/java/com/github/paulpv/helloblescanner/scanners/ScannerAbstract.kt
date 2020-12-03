@@ -1,28 +1,27 @@
 package com.github.paulpv.helloblescanner.scanners
 
+import android.app.PendingIntent
 import android.content.Context
+import android.content.Intent
 import android.util.Log
-import com.github.paulpv.helloblescanner.BuildConfig
-import com.github.paulpv.helloblescanner.DeviceInfo
+import androidx.annotation.RequiresApi
+import com.github.paulpv.helloblescanner.BleScanResult
 import com.github.paulpv.helloblescanner.Utils
+import com.github.paulpv.helloblescanner.collections.ExpiringIterableLongSparseArray
 
-abstract class ScannerAbstract(private val applicationContext: Context, private val callbacks: Callbacks) {
+abstract class ScannerAbstract(
+    protected val applicationContext: Context,
+    scanResultTimeoutMillis: Long,
+    private val callbacks: Callbacks
+) {
     companion object {
-        private const val TAG = "ScannerAbstract"
-
-        val DEVICE_SCAN_TIMEOUT_SECONDS_DEFAULT = if (BuildConfig.DEBUG) {
-            33.0 // 33 seconds
-        } else {
-            5.5 * 60.0 // 330 seconds == 5.5 minutes
-        }
+        private val TAG = Utils.TAG(ScannerAbstract::class)
     }
 
     interface Callbacks {
-        fun onScanningStarted()
-        fun onScanningStopped()
-        fun onDeviceAdded(deviceInfo: DeviceInfo)
-        fun onDeviceUpdated(deviceInfo: DeviceInfo)
-        fun onDeviceRemoved(deviceInfo: DeviceInfo)
+        fun onScanResultAdded(item: ExpiringIterableLongSparseArray.ItemWrapper<BleScanResult>)
+        fun onScanResultUpdated(item: ExpiringIterableLongSparseArray.ItemWrapper<BleScanResult>)
+        fun onScanResultRemoved(item: ExpiringIterableLongSparseArray.ItemWrapper<BleScanResult>)
     }
 
     protected val bluetoothAdapter = Utils.getBluetoothAdapter(applicationContext)
@@ -35,26 +34,81 @@ abstract class ScannerAbstract(private val applicationContext: Context, private 
     val isBluetoothEnabled: Boolean
         get() = Utils.isBluetoothAdapterEnabled(bluetoothAdapter)
 
+    @Suppress("unused")
+    fun bluetoothAdapterEnable(enable: Boolean) = Utils.bluetoothAdapterEnable(bluetoothAdapter, enable)
+
+    @Suppress("unused")
+    fun bluetoothAdapterToggle() = Utils.bluetoothAdapterEnable(bluetoothAdapter, !isBluetoothEnabled)
+
+    protected val recentScanResults =
+        ExpiringIterableLongSparseArray<BleScanResult>("recentScanResults", scanResultTimeoutMillis)
+
+    val recentScanResultsCount: Int
+        get() = recentScanResults.size()
+
+    val recentScanResultsIterator: Iterator<ExpiringIterableLongSparseArray.ItemWrapper<BleScanResult>>
+        get() = recentScanResults.iterateValues()
+
+    init {
+        //@formatter:off
+        recentScanResults.addListener(object : ExpiringIterableLongSparseArray.ExpiringIterableLongSparseArrayListener<BleScanResult> {
+            override fun onItemAdded(key: Long, index: Int, item: ExpiringIterableLongSparseArray.ItemWrapper<BleScanResult>) = this@ScannerAbstract.onScanResultAdded(item)
+            override fun onItemUpdated(key: Long, index: Int, item: ExpiringIterableLongSparseArray.ItemWrapper<BleScanResult>) = this@ScannerAbstract.onScanResultUpdated(item)
+            override fun onItemExpiring(key: Long, index: Int, item: ExpiringIterableLongSparseArray.ItemWrapper<BleScanResult>): Boolean = this@ScannerAbstract.onScanResultExpiring(item)
+            override fun onItemRemoved(key: Long, index: Int, item: ExpiringIterableLongSparseArray.ItemWrapper<BleScanResult>) = this@ScannerAbstract.onScanResultRemoved(item)
+        })
+        //@formatter:on
+    }
+
     open fun shutdown() {
         Log.i(TAG, "shutdown()")
         scanStop()
     }
 
-    abstract fun clear()
-
-    abstract fun scanStart()
-
-    abstract fun scanStop()
-
-    protected fun onDeviceAdded(deviceInfo: DeviceInfo) {
-        callbacks.onDeviceAdded(deviceInfo)
+    open fun clear() {
+        recentScanResults.clear()
     }
 
-    protected fun onDeviceUpdated(deviceInfo: DeviceInfo) {
-        callbacks.onDeviceUpdated(deviceInfo)
+    /**
+     * Implementor should:
+     * 1) Ignore scanPendingIntent if API < 26
+     * 2) Save a reference to scanPendingIntent as necessary
+     * @param scanPendingIntent null if using ScanCallback, non-null if using PendingIntent
+     * @return true if successful; false if not successful
+     */
+    open fun scanStart(scanPendingIntent: PendingIntent?): Boolean {
+        recentScanResults.resume()
+        return true
     }
 
-    protected fun onDeviceRemoved(deviceInfo: DeviceInfo) {
-        callbacks.onDeviceRemoved(deviceInfo)
+    /**
+     * @return true if successful; false if not successful
+     */
+    open fun scanStop(): Boolean {
+        recentScanResults.pause()
+        return true
+    }
+
+    @RequiresApi(26)
+    abstract fun onScanResultReceived(context: Context, intent: Intent)
+
+    private fun onScanResultAdded(item: ExpiringIterableLongSparseArray.ItemWrapper<BleScanResult>) {
+        Log.v(TAG, "onScanResultAdded($item)")
+        callbacks.onScanResultAdded(item)
+    }
+
+    private fun onScanResultUpdated(item: ExpiringIterableLongSparseArray.ItemWrapper<BleScanResult>) {
+        Log.v(TAG, "onScanResultUpdated($item)")
+        callbacks.onScanResultUpdated(item)
+    }
+
+    private fun onScanResultExpiring(item: ExpiringIterableLongSparseArray.ItemWrapper<BleScanResult>): Boolean {
+        Log.w(TAG, "onScanResultExpiring($item)")
+        return false
+    }
+
+    private fun onScanResultRemoved(item: ExpiringIterableLongSparseArray.ItemWrapper<BleScanResult>) {
+        Log.v(TAG, "onScanResultRemoved($item)")
+        callbacks.onScanResultRemoved(item)
     }
 }

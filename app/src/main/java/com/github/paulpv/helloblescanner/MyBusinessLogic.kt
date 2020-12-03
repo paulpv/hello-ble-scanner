@@ -1,11 +1,18 @@
 package com.github.paulpv.helloblescanner
 
+import android.Manifest
 import android.app.Activity
 import android.app.Application
+import android.app.PendingIntent
 import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanSettings
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
 import android.os.*
 import android.util.Log
+import androidx.annotation.RequiresApi
+import com.github.paulpv.helloblescanner.collections.ExpiringIterableLongSparseArray
 import com.github.paulpv.helloblescanner.scanners.ScannerAbstract
 import com.github.paulpv.helloblescanner.scanners.ScannerNative
 import com.github.paulpv.helloblescanner.scanners.ScannerNordic
@@ -14,14 +21,41 @@ import kotlin.math.ceil
 
 class MyBusinessLogic(private val application: Application, private val looper: Looper) {
     companion object {
-        private const val TAG = "MyBusinessLogic"
+        private val TAG = Utils.TAG(MyBusinessLogic::class)
+
+        fun getInstance(context: Context): MyBusinessLogic? {
+            val bleToolApplication = context.applicationContext as? MyApplication ?: return null
+            return getInstance(bleToolApplication)
+        }
+
+        @Suppress("MemberVisibilityCanBePrivate")
+        fun getInstance(bleToolApplication: MyApplication): MyBusinessLogic = bleToolApplication.businessLogic
+
+        private const val SCAN_RECEIVER_REQUEST_CODE = 69
 
         private val SCAN_FILTER_EMPTY: ScanFilter = ScanFilter.Builder().build()
 
         @Suppress("PrivatePropertyName")
         private val PERSISTENT_SCANNING_STARTED_UPTIME_MILLIS_UNDEFINED = 0L
 
-        val SCANNER_TYPE_DEFAULT = ScannerTypes.Native
+        /**
+         * Get a trial key at https://sweetblue.io/#try and provide a package name.
+         * Rename app/build.gradle android.defaultConfig.applicationId to the provided package name.
+         */
+        //@formatter:off
+        private const val SWEETBLUE_API_KEY = "aF_IbhfP2u35uKXEdcp66yeGNSRLKXPuO1VCX3LCA8YmghcM6IuLvkPaLmAidrlEuLIR90KAWGTJLA_UUI3snn89zyMqfB6Pq1vyOKn866vWbKqVhtNLyeiz5ljS_aYdABEFnxKWVpcM_myYWT8fvq1iBBFW2it7QPkpJC5Cr1fPg98Ako1vXqXoY7OSAxha2_UWd6m3TpNFtx6Bpv3TBFkbN4w-OM9bHx9_iCZl3UA17_zptQuBu4pSX7rhBpzhyTBfIp6vFE_G-eVuXoPl-SMgMdCi9y4h1pIMLOUT1N1aIBgZNc9KMfsCuklq7Umrzca6fxspRkojMRP6fMIg8w"
+        //@formatter:on
+
+        val PERMISSIONS = newPermissions()
+
+        private fun newPermissions(): Array<String> {
+            val permissions = mutableListOf<String>()
+            permissions.add(Manifest.permission.ACCESS_FINE_LOCATION)
+            if (Build.VERSION.SDK_INT >= 29) {
+                permissions.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+            }
+            return permissions.toTypedArray()
+        }
     }
 
     /**
@@ -69,18 +103,29 @@ class MyBusinessLogic(private val application: Application, private val looper: 
         //@formatter:on
     }
 
-    init {
-        application.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
-            //@formatter:off
-            override fun onActivityCreated(activity: Activity?, savedInstanceState: Bundle?) = this@MyBusinessLogic.onActivityCreated(activity!!)
-            override fun onActivityStarted(activity: Activity?) = this@MyBusinessLogic.onActivityStarted(activity!!)
-            override fun onActivityResumed(activity: Activity?) = this@MyBusinessLogic.onActivityResumed(activity!!)
-            override fun onActivitySaveInstanceState(activity: Activity?, outState: Bundle?) = this@MyBusinessLogic.onActivitySaveInstanceState(activity!!, outState)
-            override fun onActivityPaused(activity: Activity?) = this@MyBusinessLogic.onActivityPaused(activity!!)
-            override fun onActivityStopped(activity: Activity?) = this@MyBusinessLogic.onActivityStopped(activity!!)
-            override fun onActivityDestroyed(activity: Activity?) = this@MyBusinessLogic.onActivityDestroyed(activity!!)
-            //@formatter:on
-        })
+    class BleDeviceScanReceiver : BroadcastReceiver() {
+        companion object {
+            private val ACTION = "${Utils.getClassName(BleDeviceScanReceiver::class)}.ACTION"
+
+            fun newPendingIntent(context: Context, requestCode: Int, extras: Bundle? = null): PendingIntent? {
+                if (Build.VERSION.SDK_INT < 26) return null
+                val intent = Intent(context, BleDeviceScanReceiver::class.java)
+                intent.action = ACTION
+                if (extras != null) {
+                    intent.putExtras(extras)
+                }
+                return PendingIntent.getBroadcast(context, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT)
+            }
+        }
+
+        @RequiresApi(26)
+        override fun onReceive(context: Context?, intent: Intent?) {
+            //Log.e(TAG, "onReceive: context=$context, intent=${Utils.toString(intent)}")
+            if (context == null || intent == null) return
+            when (intent.action) {
+                ACTION -> getInstance(context)?.onScanResultReceived(intent)
+            }
+        }
     }
 
     private val observers: MutableSet<ScannerAbstract.Callbacks> = mutableSetOf()
@@ -182,9 +227,11 @@ class MyBusinessLogic(private val application: Application, private val looper: 
     private fun newNativeScanFilters(): List<ScanFilter> {
         val scanFilters = mutableListOf<ScanFilter>()
 
-        // BEGIN: Bespoke for the purposes of this demo
-        scanFilters.add(ScanFilter.Builder().setDeviceName("FNDR").build())
-        // END: Bespoke for the purposes of this demo
+        if (true) {
+            // BEGIN: Bespoke for the purposes of this demo
+            scanFilters.add(ScanFilter.Builder().setDeviceName("FNDR").build())
+            // END: Bespoke for the purposes of this demo
+        }
 
         if (scanFilters.isEmpty()) {
             scanFilters.add(SCAN_FILTER_EMPTY)
@@ -196,43 +243,92 @@ class MyBusinessLogic(private val application: Application, private val looper: 
         val builder = ScanSettings.Builder()
         builder.setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY)
         builder.setReportDelay(0)
-        builder.setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
-        builder.setMatchMode(ScanSettings.MATCH_MODE_AGGRESSIVE)
-        builder.setNumOfMatches(ScanSettings.MATCH_NUM_MAX_ADVERTISEMENT)
+        if (Build.VERSION.SDK_INT >= 23) {
+            builder.setCallbackType(ScanSettings.CALLBACK_TYPE_ALL_MATCHES)
+            builder.setMatchMode(ScanSettings.MATCH_MODE_AGGRESSIVE)
+            builder.setNumOfMatches(ScanSettings.MATCH_NUM_MAX_ADVERTISEMENT)
+        }
         return builder.build()
     }
 
     private val nativeScanFilters = newNativeScanFilters()
     private val nativeScanSettings = newNativeScanSettings()
 
-    private val callbacks = object : ScannerAbstract.Callbacks {
-        override fun onScanningStarted() = this@MyBusinessLogic.onScanningStarted()
-        override fun onScanningStopped() = this@MyBusinessLogic.onScanningStopped()
-        override fun onDeviceAdded(deviceInfo: DeviceInfo) = this@MyBusinessLogic.onDeviceAdded(deviceInfo)
-        override fun onDeviceUpdated(deviceInfo: DeviceInfo) = this@MyBusinessLogic.onDeviceUpdated(deviceInfo)
-        override fun onDeviceRemoved(deviceInfo: DeviceInfo) = this@MyBusinessLogic.onDeviceRemoved(deviceInfo)
-    }
+    @Suppress("MemberVisibilityCanBePrivate", "PropertyName")
+    val IS_SCAN_PENDING_INTENT_SUPPORTED = Build.VERSION.SDK_INT >= 26
 
-    private lateinit var scanner: ScannerAbstract
-
-    enum class ScannerTypes {
-        Native,
-        Nordic,
-        SweetBlue,
-    }
-
-    var scannerType: ScannerTypes = SCANNER_TYPE_DEFAULT
+    /**
+     * Ignored on systems < API26.
+     * On systems >= API26:
+     * Set to true to force use of >= API26 [android.app.PendingIntent] scans.
+     * Set to false to force use of < API26 [android.bluetooth.le.ScanCallback.ScanCallback] scans.
+     */
+    @Suppress("MemberVisibilityCanBePrivate", "PropertyName")
+    var USE_SCAN_PENDING_INTENT: Boolean = false && IS_SCAN_PENDING_INTENT_SUPPORTED
         set(value) {
-            Log.i(TAG, "scannerType set $value")
+            @Suppress("NAME_SHADOWING")
+            val value = if (IS_SCAN_PENDING_INTENT_SUPPORTED) value else false
+            if (field == value) return
             val wasScanning = isScanStarted
             if (wasScanning) {
                 scanStop()
             }
-            scanner = when (value) {
-                ScannerTypes.Native -> ScannerNative(application, callbacks, nativeScanFilters, nativeScanSettings)
-                ScannerTypes.Nordic -> ScannerNordic(application, callbacks, nativeScanFilters, nativeScanSettings)
-                ScannerTypes.SweetBlue -> ScannerSweetBlue(application, callbacks, nativeScanFilters, nativeScanSettings)
+            field = value
+            if (wasScanning) {
+                scanStart()
             }
+        }
+
+    @Suppress("MemberVisibilityCanBePrivate", "PropertyName")
+    var USE_SCAN_CALLBACK: Boolean
+        get() {
+            return !USE_SCAN_PENDING_INTENT
+        }
+        set(value) {
+            USE_SCAN_PENDING_INTENT = !value
+        }
+
+    private fun newScanningPendingIntent(): PendingIntent? {
+        return BleDeviceScanReceiver.newPendingIntent(application, SCAN_RECEIVER_REQUEST_CODE)
+    }
+
+    private val scannerCallbacks = object : ScannerAbstract.Callbacks {
+        //@formatter:off
+        override fun onScanningStarted() = this@MyBusinessLogic.onScanningStarted()
+        override fun onScanningStopped() = this@MyBusinessLogic.onScanningStopped()
+        override fun onScanResultAdded(item: ExpiringIterableLongSparseArray.ItemWrapper<BleScanResult>) = this@MyBusinessLogic.onScanResultAdded(item)
+        override fun onScanResultUpdated(item: ExpiringIterableLongSparseArray.ItemWrapper<BleScanResult>) = this@MyBusinessLogic.onScanResultUpdated(item)
+        override fun onScanResultRemoved(item: ExpiringIterableLongSparseArray.ItemWrapper<BleScanResult>) = this@MyBusinessLogic.onScanResultRemoved(item)
+        //@formatter:on
+    }
+
+    /**
+     * NEVER CHANGE THE CODES OF EXISTING VALUES!
+     */
+    enum class ScannerTypes(val code: Int) {
+        Native(0),
+        Nordic(1),
+        SweetBlue(2),
+    }
+
+    private val supportsSweetBlue: Boolean
+        get() = SWEETBLUE_API_KEY.isNotBlank()
+
+    @Suppress("PrivatePropertyName")
+    private val SCANNER_TYPE_DEFAULT = if (supportsSweetBlue) ScannerTypes.SweetBlue else ScannerTypes.Native
+
+    var scannerType: ScannerTypes = SCANNER_TYPE_DEFAULT
+        set(value) {
+            Log.i(TAG, "scannerType set $value")
+            if (value == ScannerTypes.SweetBlue && !supportsSweetBlue) {
+                throw IllegalArgumentException("SweetBlue is only supported when SWEETBLUE_API_KEY is not blank")
+            }
+            if (value == scannerType) return
+            val wasScanning = isScanStarted
+            if (wasScanning) {
+                scanStop()
+            }
+            _scanner = newScanner(value)
             Log.i(TAG, "scannerType set $scanner")
             field = value
             if (wasScanning) {
@@ -240,38 +336,96 @@ class MyBusinessLogic(private val application: Application, private val looper: 
             }
         }
 
+    private var _scanner: ScannerAbstract? = null
+    private val scanner: ScannerAbstract
+        get() {
+            if (_scanner == null) {
+                _scanner = newScanner(scannerType)
+            }
+            return _scanner!!
+        }
+
+    private fun newScanner(scannerType: ScannerTypes): ScannerAbstract {
+        val scanResultTimeoutMillis = 30 * 1000L
+        return when (scannerType) {
+            //@formatter:off
+            ScannerTypes.Native -> ScannerNative(application, scanResultTimeoutMillis, scannerCallbacks, nativeScanFilters, nativeScanSettings)
+            ScannerTypes.Nordic -> ScannerNordic(application, scanResultTimeoutMillis, scannerCallbacks, nativeScanFilters, nativeScanSettings)
+            ScannerTypes.SweetBlue -> ScannerSweetBlue(application, scanResultTimeoutMillis, scannerCallbacks, nativeScanFilters, nativeScanSettings, SWEETBLUE_API_KEY)
+            //@formatter:on
+        }
+    }
+
+    init {
+        Log.i(TAG, "+init")
+
+        application.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
+            //@formatter:off
+            override fun onActivityCreated(activity: Activity?, savedInstanceState: Bundle?) = this@MyBusinessLogic.onActivityCreated(activity!!)
+            override fun onActivityStarted(activity: Activity?) = this@MyBusinessLogic.onActivityStarted(activity!!)
+            override fun onActivityResumed(activity: Activity?) = this@MyBusinessLogic.onActivityResumed(activity!!)
+            override fun onActivitySaveInstanceState(activity: Activity?, outState: Bundle?) = this@MyBusinessLogic.onActivitySaveInstanceState(activity!!, outState)
+            override fun onActivityPaused(activity: Activity?) = this@MyBusinessLogic.onActivityPaused(activity!!)
+            override fun onActivityStopped(activity: Activity?) = this@MyBusinessLogic.onActivityStopped(activity!!)
+            override fun onActivityDestroyed(activity: Activity?) = this@MyBusinessLogic.onActivityDestroyed(activity!!)
+            //@formatter:on
+        })
+
+        Log.i(TAG, "-init")
+    }
+
     fun initialize() {
         Log.i(TAG, "initialize")
         scannerType = SCANNER_TYPE_DEFAULT
+
+        Log.i(TAG, "init: scannerType=$scannerType")
+        Log.i(TAG, "init: scanner=$scanner")
+        Log.i(TAG, "init: USE_SCAN_PENDING_INTENT=$USE_SCAN_PENDING_INTENT")
+    }
+
+    fun clear() {
+        Log.i(TAG, "clear()")
+        scanner.clear()
     }
 
     var scanStartCount = 0
     private var scanningStartedUptimeMillis = PERSISTENT_SCANNING_STARTED_UPTIME_MILLIS_UNDEFINED
 
-    val scanningElapsedMillis: Long
+    private val scanningElapsedMillis: Long
         get() {
             val scanningStartedUptimeMillis = this.scanningStartedUptimeMillis
             return if (scanningStartedUptimeMillis != PERSISTENT_SCANNING_STARTED_UPTIME_MILLIS_UNDEFINED) SystemClock.uptimeMillis() - scanningStartedUptimeMillis else -1L
         }
 
-    fun scanStart() {
+    private var scanningStartedLastScanMillis = PERSISTENT_SCANNING_STARTED_UPTIME_MILLIS_UNDEFINED
+    private var numberOfScanStartsThatSawDevices = 0
+
+    fun scanStart(): Boolean {
         Log.i(TAG, "scanStart")
+        if (isScanStarted) return true
+        clear()
         isScanStarted = true
         scanStartCount = 0
         scanningStartedUptimeMillis = SystemClock.uptimeMillis()
-        scanResume()
+        val result = scanResume()
+        if (!result) {
+            scanStop()
+        }
+        return result
     }
 
-    private fun scanResume() {
+    private fun scanResume(): Boolean {
         Log.i(TAG, "scanResume")
-        if (!isScanStarted) return
+        if (!isScanStarted) return false
         delayedScanningRemoveAll()
         //@formatter:off
         Log.e(TAG, "scanResume: scanningElapsedMillis=${Utils.getTimeDurationFormattedString(scanningElapsedMillis)}, scanStartCount=${scanStartCount}; scanner.scanStart()")
         //@formatter:on
-        scanner.scanStart()
+        val scanningPendingIntent = if (USE_SCAN_PENDING_INTENT) newScanningPendingIntent() else null
+        scanner.scanStart(scanningPendingIntent)
         scanStartCount++
         delayedScanningPauseAdd()
+        return true
     }
 
     private fun scanPause() {
@@ -289,6 +443,8 @@ class MyBusinessLogic(private val application: Application, private val looper: 
         Log.i(TAG, "scanStop")
         isScanStarted = false
         scanPause()
+        scanStartCount = 0
+        scanningStartedUptimeMillis = PERSISTENT_SCANNING_STARTED_UPTIME_MILLIS_UNDEFINED
     }
 
     private val handler = Handler(this.looper) { msg -> this@MyBusinessLogic.handleMessage(msg) }
@@ -350,24 +506,39 @@ class MyBusinessLogic(private val application: Application, private val looper: 
         Log.v(TAG, "onScanningStopped()")
     }
 
-    private fun onDeviceAdded(deviceInfo: DeviceInfo) {
-        Log.v(TAG, "onDeviceAdded($deviceInfo)")
+    @RequiresApi(26)
+    fun onScanResultReceived(intent: Intent) {
+        if (!isScanStarted) {
+            Log.w(TAG, "onScanResultReceived: isScan == false; ignoring")
+            return
+        }
+
+        @Suppress("SimplifyBooleanWithConstants")
+        if (false && BuildConfig.DEBUG) {
+            Log.e(TAG, "onScanResultReceived(intent=${Utils.toString(intent)})")
+        }
+
+        scanner.onScanResultReceived(application, intent)
+    }
+
+    private fun onScanResultAdded(item: ExpiringIterableLongSparseArray.ItemWrapper<BleScanResult>) {
+        Log.v(TAG, "onScanResultAdded($item)")
         synchronized(observers) {
-            observers.forEach { it.onDeviceAdded(deviceInfo) }
+            observers.forEach { it.onScanResultAdded(item) }
         }
     }
 
-    private fun onDeviceUpdated(deviceInfo: DeviceInfo) {
-        Log.v(TAG, "onDeviceUpdated($deviceInfo)")
+    private fun onScanResultUpdated(item: ExpiringIterableLongSparseArray.ItemWrapper<BleScanResult>) {
+        Log.v(TAG, "onScanResultUpdated($item)")
         synchronized(observers) {
-            observers.forEach { it.onDeviceUpdated(deviceInfo) }
+            observers.forEach { it.onScanResultUpdated(item) }
         }
     }
 
-    private fun onDeviceRemoved(deviceInfo: DeviceInfo) {
-        Log.v(TAG, "onDeviceRemoved($deviceInfo)")
+    private fun onScanResultRemoved(item: ExpiringIterableLongSparseArray.ItemWrapper<BleScanResult>) {
+        Log.v(TAG, "onScanResultRemoved($item)")
         synchronized(observers) {
-            observers.forEach { it.onDeviceRemoved(deviceInfo) }
+            observers.forEach { it.onScanResultRemoved(item) }
         }
     }
 }

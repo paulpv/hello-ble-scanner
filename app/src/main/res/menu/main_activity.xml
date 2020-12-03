@@ -29,5 +29,25 @@
             android:title="ScannerSweetBlue"
             app:showAsAction="never" />
     </group>
-    
+
+    <group
+        android:id="@+id/action_scanner_mode"
+        android:checkableBehavior="single"
+        android:orderInCategory="200"
+        android:visible="true">
+        <item
+            android:id="@+id/action_scanner_mode_scancallback"
+            android:title="ScanCallback"
+            app:showAsAction="never" />
+        <item
+            android:id="@+id/action_scanner_mode_pendingintent"
+            android:title="PendingIntent"
+            app:showAsAction="never" />
+    </group>
+
+    <item
+        android:id="@+id/action_clear"
+        android:title="@string/action_clear"
+        app:showAsAction="never" />
+
 </menu>

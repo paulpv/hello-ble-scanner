@@ -45,6 +45,7 @@ import java.util.Objects;
  * or compacted later in a single garbage collection step of all removed entries.  This garbage collection will need to
  * be performed at any time the array needs to be grown or the the map size or entry values are retrieved.</p>
  */
+@SuppressWarnings("unused")
 public class IterableLongSparseArray<V>
         implements Cloneable {
     private static final String TAG = Utils.TAG(IterableLongSparseArray.class);
@@ -160,18 +161,19 @@ public class IterableLongSparseArray<V>
         mSize = 0;
     }
 
+    @NotNull
     @Override
-    @SuppressWarnings({"unchecked", "CloneDoesntDeclareCloneNotSupportedException"})
     public IterableLongSparseArray<V> clone() {
         IterableLongSparseArray<V> clone = null;
         try {
             //noinspection unchecked
             clone = (IterableLongSparseArray<V>) super.clone();
-            clone.mKeys = mKeys.clone();
-            clone.mValues = mValues.clone();
-        } catch (CloneNotSupportedException cnse) {
-            /* ignore */
+        } catch (CloneNotSupportedException e) {
+            /* ignore; this class always implements Cloneable */
         }
+        //noinspection ConstantConditions
+        clone.mKeys = mKeys.clone();
+        clone.mValues = mValues.clone();
         return clone;
     }
 
@@ -323,6 +325,7 @@ public class IterableLongSparseArray<V>
     public V replace(long key, V value) {
         int index = indexOfKey(key);
         if (index >= 0) {
+            @SuppressWarnings("unchecked")
             V oldValue = (V) mValues[index];
             mValues[index] = value;
             return oldValue;

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.github.paulpv.helloblescanner;
+package com.github.paulpv.helloblescanner.collections;
 
 import android.util.Log;
 

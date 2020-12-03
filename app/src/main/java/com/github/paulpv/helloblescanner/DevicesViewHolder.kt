@@ -6,10 +6,9 @@ import android.view.View.OnClickListener
 import android.view.ViewGroup
 import android.widget.TextView
 import java.util.*
-import java.util.concurrent.TimeUnit
 
 class DevicesViewHolder(val context: Context, itemView: ViewGroup) :
-        BindableViewHolder<DeviceInfo>(itemView) {
+        BindableViewHolder<BleScanResult>(itemView) {
     //companion object {
     //    private val TAG = TAG(DevicesViewHolder::class)
     //}
@@ -25,7 +24,7 @@ class DevicesViewHolder(val context: Context, itemView: ViewGroup) :
     private val labelBatteryPercent: TextView = itemView.findViewById(R.id.labelBatteryPercent)
 
     @SuppressLint("SetTextI18n")
-    override fun bindTo(item: DeviceInfo, clickListener: OnClickListener) {
+    override fun bindTo(item: BleScanResult, clickListener: OnClickListener) {
         super.bindTo(item, clickListener)
         //val backgroundColor = if (item.isClicked) R.color.colorDeviceCellClicked else R.color.colorDeviceCell
         //groupDeviceCell.setBackgroundColor(Utils.getColor(context, backgroundColor))
@@ -35,8 +34,8 @@ class DevicesViewHolder(val context: Context, itemView: ViewGroup) :
         //labelTimeoutRemaining.text = "remain=${Utils.getTimeDurationFormattedString(item.timeoutRemainingMillis, TimeUnit.MINUTES)}"
         labelName.text = item.name
         val locale = Locale.getDefault()
-        labelRssiReal.text = String.format(locale, "real=%04d", item.rssiRealtime)
-        //labelRssiAverage.text = String.format(locale, "avg=%04d", item.rssiSmoothed)
+        labelRssiReal.text = String.format(locale, "real=%04d", item.rssi)
+        labelRssiAverage.text = String.format(locale, "avg=%04d", item.rssiSmoothed)
         //labelBatteryPercent.text = String.format(locale, "batt= %02d%%", item.batteryPercent)
     }
 }

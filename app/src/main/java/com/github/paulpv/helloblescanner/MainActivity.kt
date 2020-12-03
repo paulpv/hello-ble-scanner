@@ -1,6 +1,5 @@
 package com.github.paulpv.helloblescanner
 
-import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -17,6 +16,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.view.MenuCompat
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.github.paulpv.helloblescanner.collections.ExpiringIterableLongSparseArray
 import com.github.paulpv.helloblescanner.scanners.ScannerAbstract
 import com.google.android.material.snackbar.Snackbar
 import kotlinx.android.synthetic.main.activity_main.*
@@ -44,8 +44,8 @@ class MainActivity : AppCompatActivity(), ScannerAbstract.Callbacks {
         }
 
         devicesAdapter = DevicesAdapter(this, SortBy.Address)
-        devicesAdapter.setEventListener(object : DevicesAdapter.EventListener<DeviceInfo> {
-            override fun onItemSelected(item: DeviceInfo) = this@MainActivity.onItemSelected(item)
+        devicesAdapter.setEventListener(object : DevicesAdapter.EventListener<BleScanResult> {
+            override fun onItemSelected(item: BleScanResult) = this@MainActivity.onItemSelected(item)
         })
 
         val layoutManager = LinearLayoutManager(this, LinearLayoutManager.VERTICAL, false)
@@ -94,13 +94,22 @@ class MainActivity : AppCompatActivity(), ScannerAbstract.Callbacks {
             return false
         }
 
-        val menuItem = menu?.findItem(
+        var menuItem = menu?.findItem(
             when (businessLogic.scannerType) {
                 MyBusinessLogic.ScannerTypes.Native -> R.id.action_scanner_type_native
                 MyBusinessLogic.ScannerTypes.Nordic -> R.id.action_scanner_type_nordic
                 MyBusinessLogic.ScannerTypes.SweetBlue -> R.id.action_scanner_type_sweetblue
             }
         )
+        if (menuItem != null) {
+            menuItem.isChecked = true
+        }
+
+        menuItem = when {
+            businessLogic.USE_SCAN_CALLBACK -> menu?.findItem(R.id.action_scanner_mode_scancallback)
+            businessLogic.USE_SCAN_PENDING_INTENT -> menu?.findItem(R.id.action_scanner_mode_pendingintent)
+            else -> null
+        }
         if (menuItem != null) {
             menuItem.isChecked = true
         }
@@ -124,6 +133,15 @@ class MainActivity : AppCompatActivity(), ScannerAbstract.Callbacks {
             R.id.action_scanner_type_sweetblue -> {
                 businessLogic.scannerType = MyBusinessLogic.ScannerTypes.SweetBlue
             }
+            R.id.action_scanner_mode_pendingintent -> {
+                businessLogic.USE_SCAN_PENDING_INTENT = true
+            }
+            R.id.action_scanner_mode_scancallback -> {
+                businessLogic.USE_SCAN_CALLBACK = true
+            }
+            R.id.action_clear -> {
+                businessLogic.clear()
+            }
             else -> {
                 consume = false
             }
@@ -135,43 +153,48 @@ class MainActivity : AppCompatActivity(), ScannerAbstract.Callbacks {
     //
     //
 
-    private val requestScanningPermission = registerForActivityResult(
-        ActivityResultContracts.RequestPermission()
-    ) { isGranted: Boolean ->
-        if (isGranted) {
-            scanStart(true)
-        } else {
-            onScanningPermissionDenied()
-        }
+    private fun onScanningPermissionDenied() {
+        switchScan?.isChecked = false
+        val view: View = window.decorView.findViewById(android.R.id.content)
+        Snackbar.make(view, "Missing Required Permissions", Snackbar.LENGTH_LONG).show()
     }
 
-    private fun onScanningPermissionDenied() {
-        switchScan.isChecked = false
-        val view: View = window.decorView.findViewById(android.R.id.content)
-        Snackbar.make(view, "Location permission required", Snackbar.LENGTH_LONG).show()
-    }
+    private val requestMultiplePermissions =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { permissions ->
+            val allGranted = permissions.values.all { it }
+            if (allGranted) {
+                scanStartAfterPermissionsGranted()
+            } else {
+                onScanningPermissionDenied()
+            }
+        }
 
     private fun scanStart(start: Boolean) {
         if (start) {
-            when {
-                ContextCompat.checkSelfPermission(
-                    this,
-                    Manifest.permission.ACCESS_FINE_LOCATION
-                ) == PackageManager.PERMISSION_GRANTED -> {
-                    businessLogic.scanStart()
-                    // TODO:(pv) if failed then set buttonView.isChecked = false
-                    devicesAdapter.autoUpdateVisibleItems(start)
+            if (android.os.Build.VERSION.SDK_INT >= 23) {
+                when {
+                    MyBusinessLogic.PERMISSIONS.all {
+                        ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
+                    } -> scanStartAfterPermissionsGranted()
+                    MyBusinessLogic.PERMISSIONS.all {
+                        shouldShowRequestPermissionRationale(it)
+                    } -> onScanningPermissionDenied()
+                    else -> {
+                        onScanningPermissionDenied()
+                        requestMultiplePermissions.launch(MyBusinessLogic.PERMISSIONS)
+                    }
                 }
-                shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION) -> {
-                    onScanningPermissionDenied()
-                }
-                else -> {
-                    requestScanningPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-                }
+            } else {
+                scanStartAfterPermissionsGranted()
             }
         } else {
             businessLogic.scanStop()
         }
+    }
+
+    private fun scanStartAfterPermissionsGranted() {
+        switchScan?.isChecked = businessLogic.scanStart()
+        devicesAdapter?.autoUpdateVisibleItems(true)
     }
 
     //
@@ -183,30 +206,22 @@ class MainActivity : AppCompatActivity(), ScannerAbstract.Callbacks {
         //text_scan_count.text = "(${devicesAdapter!!.itemCount})"
     }
 
-    override fun onScanningStarted() {
-        Log.v(TAG, "onScanningStarted()")
-    }
-
-    override fun onScanningStopped() {
-        Log.v(TAG, "onScanningStopped()")
-    }
-
-    override fun onDeviceAdded(deviceInfo: DeviceInfo) {
-        Log.v(TAG, "onDeviceAdded($deviceInfo)")
-        devicesAdapter.add(deviceInfo)
+    override fun onScanResultAdded(item: ExpiringIterableLongSparseArray.ItemWrapper<BleScanResult>) {
+        Log.v(TAG, "onScanResultAdded($item)")
+        devicesAdapter.add(item.value)
         //val device = getDevice(item)
         //device?.gattHandler?.addListener(gattHandlerListener)
         updateScanCount()
     }
 
-    override fun onDeviceUpdated(deviceInfo: DeviceInfo) {
-        Log.v(TAG, "onDeviceUpdated($deviceInfo)")
-        devicesAdapter.add(deviceInfo)
+    override fun onScanResultUpdated(item: ExpiringIterableLongSparseArray.ItemWrapper<BleScanResult>) {
+        Log.v(TAG, "onScanResultUpdated($item)")
+        devicesAdapter.add(item.value)
     }
 
-    override fun onDeviceRemoved(deviceInfo: DeviceInfo) {
-        Log.v(TAG, "onDeviceRemoved($deviceInfo)")
-        devicesAdapter.remove(deviceInfo)
+    override fun onScanResultRemoved(item: ExpiringIterableLongSparseArray.ItemWrapper<BleScanResult>) {
+        Log.v(TAG, "onScanResultRemovedRemoved($item)")
+        devicesAdapter.remove(item.value)
         //val device = getDevice(item)
         //device?.gattHandler?.removeListener(gattHandlerListener)
         updateScanCount()
@@ -216,7 +231,7 @@ class MainActivity : AppCompatActivity(), ScannerAbstract.Callbacks {
     //
     //
 
-    private fun onItemSelected(item: DeviceInfo) {
+    private fun onItemSelected(item: BleScanResult) {
         Log.i(TAG, "onItemSelected: item=$item")
         //...
     }

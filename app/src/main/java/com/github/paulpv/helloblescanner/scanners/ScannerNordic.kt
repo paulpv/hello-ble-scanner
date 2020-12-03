@@ -1,20 +1,24 @@
 package com.github.paulpv.helloblescanner.scanners
 
+import android.app.PendingIntent
 import android.bluetooth.BluetoothAdapter
 import android.content.Context
+import android.content.Intent
+import android.os.Build
 import android.util.Log
-import com.github.paulpv.helloblescanner.DeviceInfo
+import androidx.annotation.RequiresApi
+import com.github.paulpv.helloblescanner.BleScanResult
 import com.github.paulpv.helloblescanner.Utils
-import com.github.paulpv.helloblescanner.collections.ExpiringIterableLongSparseArray
 import no.nordicsemi.android.support.v18.scanner.*
 import java.util.*
 
 class ScannerNordic(
     applicationContext: Context,
+    scanResultTimeoutMillis: Long,
     callbacks: Callbacks,
     scanFiltersNative: List<android.bluetooth.le.ScanFilter>,
     scanSettingsNative: android.bluetooth.le.ScanSettings
-) : ScannerAbstract(applicationContext, callbacks) {
+) : ScannerAbstract(applicationContext, scanResultTimeoutMillis, callbacks) {
     companion object {
         private val TAG = Utils.TAG(ScannerNordic::class)
 
@@ -116,42 +120,51 @@ class ScannerNordic(
         //@formatter:on
     }
 
-    private val recentlyNearbyDevices =
-        ExpiringIterableLongSparseArray<DeviceInfo>("recentlyNearbyDevices", DEVICE_SCAN_TIMEOUT_SECONDS_DEFAULT)
+    private var scanPendingIntent: PendingIntent? = null
 
-    init {
-        //@formatter:off
-        recentlyNearbyDevices.addListener(object : ExpiringIterableLongSparseArray.ExpiringIterableLongSparseArrayListener<DeviceInfo> {
-            override fun onItemAdded(key: Long, index: Int, item: ExpiringIterableLongSparseArray.ItemWrapper<DeviceInfo>) = this@ScannerNordic.onDeviceAdded(item)
-            override fun onItemUpdated(key: Long, index: Int, item: ExpiringIterableLongSparseArray.ItemWrapper<DeviceInfo>) = this@ScannerNordic.onDeviceUpdated(item)
-            override fun onItemExpiring(key: Long, index: Int, item: ExpiringIterableLongSparseArray.ItemWrapper<DeviceInfo>): Boolean = this@ScannerNordic.onDeviceExpiring(item)
-            override fun onItemRemoved(key: Long, index: Int, item: ExpiringIterableLongSparseArray.ItemWrapper<DeviceInfo>) = this@ScannerNordic.onDeviceRemoved(item)
-        })
-        //@formatter:on
+    override fun scanStart(scanPendingIntent: PendingIntent?): Boolean {
+        if (!super.scanStart(scanPendingIntent)) {
+            return false
+        }
+        // TODO:(pv) Error handling...
+        return if (scanPendingIntent == null || Build.VERSION.SDK_INT < 26) {
+            Log.i(TAG, "scanStart: startScan starting ScanCallback scan")
+            scannerNordic.startScan(scanFiltersNordic, scanSettingsNordic, scanCallbackNordic)
+            true
+        } else {
+            Log.i(TAG, "scanStart: startScan starting PendingIntent scan")
+            scannerNordic.startScan(scanFiltersNordic, scanSettingsNordic, applicationContext, scanPendingIntent)
+            true
+        }
+        return true
     }
 
-    override fun shutdown() {
-        Log.i(TAG, "shutdown()")
-        super.shutdown()
+    override fun scanStop(): Boolean {
+        if (!super.scanStop()) {
+            return false
+        }
+        // TODO:(pv) Error handling...
+        val scanPendingIntent = this.scanPendingIntent
+        return if (scanPendingIntent == null || Build.VERSION.SDK_INT < 26) {
+            Log.i(TAG, "scanStop: stopScan stopping ScanCallback scan")
+            scannerNordic.stopScan(scanCallbackNordic)
+            true
+        } else {
+            Log.i(TAG, "scanStart: stopScan stopping PendingIntent scan")
+            scannerNordic.stopScan(applicationContext, scanPendingIntent)
+            this.scanPendingIntent = null
+            true
+        }
     }
 
-    override fun clear() {
-        recentlyNearbyDevices.clear()
-    }
-
-    override fun scanStart() {
-        Log.i(TAG, "scanStart: startScan starting ScanCallback scan")
-        scannerNordic.startScan(scanFiltersNordic, scanSettingsNordic, scanCallbackNordic)
-    }
-
-    override fun scanStop() {
-        Log.i(TAG, "scanStop: stopScan stopping ScanCallback scan")
-        recentlyNearbyDevices.pause()
-        scannerNordic.stopScan(scanCallbackNordic)
+    @RequiresApi(26)
+    override fun onScanResultReceived(context: Context, intent: Intent) {
+        //......
     }
 
     private fun onScanFailed(caller: String, errorCode: Int) {
         Log.e(TAG, "onScanFailed: caller=$caller, errorCode=$errorCode")
+        // TODO:(pv) Error handling...
     }
 
     private fun onBatchScanResults(caller: String, scanResults: List<ScanResult>) {
@@ -171,57 +184,24 @@ class ScannerNordic(
     }
 
     private fun onScanResult(caller: String, callbackType: Int, scanResult: ScanResult) {
-        // @formatter:off
-        Log.v(TAG, "onScanResult: caller=$caller, callbackType=${Utils.callbackTypeToString(callbackType)}, scanResult=$scanResult")
-        // @formatter:on
-
         val device = scanResult.device
         val macAddressString = device.address
-        val macAddressLong = Utils.macAddressStringToLong(macAddressString)
-        var deviceInfo = recentlyNearbyDevices.get(macAddressLong)
-        if (deviceInfo == null) {
-            deviceInfo = DeviceInfo(scanResult.device.address, DeviceInfo.getDeviceName(scanResult), scanResult.rssi)
-        } else {
-            deviceInfo.update(DeviceInfo.getDeviceName(scanResult), scanResult.rssi)
+
+        @Suppress("SimplifyBooleanWithConstants", "ConstantConditionIf")
+        if (true) {//false && BuildConfig.DEBUG) {
+            Log.v(
+                TAG,
+                "onScanResult: caller=$caller, callbackType=${Utils.callbackTypeToString(callbackType)}, scanResult=$scanResult"
+            )
         }
-        recentlyNearbyDevices.put(macAddressLong, deviceInfo)
-    }
 
-    private fun onDeviceAdded(item: ExpiringIterableLongSparseArray.ItemWrapper<DeviceInfo>) {
-        Log.v(TAG, "onDeviceAdded($item)")
-        onDeviceAdded(item.value)
-    }
-
-    private fun onDeviceUpdated(item: ExpiringIterableLongSparseArray.ItemWrapper<DeviceInfo>) {
-        Log.v(TAG, "onDeviceUpdated($item)")
-        onDeviceUpdated(item.value)
-    }
-
-    private fun onDeviceExpiring(item: ExpiringIterableLongSparseArray.ItemWrapper<DeviceInfo>): Boolean {
-        Log.w(TAG, "onDeviceExpiring($item)")
-        /*
-        val bleScanResult = item.value
-        val scanResult = bleScanResult.scanResult
-        val bleDevice = scanResult.device
-        val macAddressString = bleDevice.address
-        val timeoutMillis = item.timeoutMillis
-        // @formatter:off
-        Log.w(TAG, "${Utils.getTimeDurationFormattedString(persistentScanningElapsedMillis)} $macAddressString onDeviceExpiring: timeoutMillis=$timeoutMillis")
-        //Log.w(TAG, "${Utils.getTimeDurationFormattedString(persistentScanningElapsedMillis)} $macAddressString onDeviceExpiring: EXPIRING...")
-        Log.w(TAG, "${Utils.getTimeDurationFormattedString(persistentScanningElapsedMillis)} $macAddressString onDeviceExpiring: isPersistentScanningEnabled=$isPersistentScanningEnabled")
-        Log.w(TAG, "${Utils.getTimeDurationFormattedString(persistentScanningElapsedMillis)} $macAddressString onDeviceExpiring: persistentScanningElapsedMillis=$persistentScanningElapsedMillis")
-        Log.w(TAG, "${Utils.getTimeDurationFormattedString(persistentScanningElapsedMillis)} $macAddressString onDeviceExpiring: isBluetoothEnabled=$isBluetoothEnabled")
-        @Suppress("UnnecessaryVariable","SimplifyBooleanWithConstants")
-        val keep = !isPersistentScanningEnabled || persistentScanningElapsedMillis < DEVICE_SCAN_TIMEOUT_MILLIS || !isBluetoothEnabled || (false && BuildConfig.DEBUG)
-        Log.w(TAG, "${Utils.getTimeDurationFormattedString(persistentScanningElapsedMillis)} $macAddressString onDeviceExpiring: keep=$keep")
-        // @formatter:on
-        return keep
-        */
-        return false
-    }
-
-    private fun onDeviceRemoved(item: ExpiringIterableLongSparseArray.ItemWrapper<DeviceInfo>) {
-        Log.v(TAG, "onDeviceRemoved($item)")
-        onDeviceRemoved(item.value)
+        val macAddressLong = Utils.macAddressStringToLong(macAddressString)
+        var deviceInfo = recentScanResults.get(macAddressLong)
+        if (deviceInfo == null) {
+            deviceInfo = BleScanResult(scanResult)
+        } else {
+            deviceInfo.update(scanResult)
+        }
+        recentScanResults.put(macAddressLong, deviceInfo)
     }
 }

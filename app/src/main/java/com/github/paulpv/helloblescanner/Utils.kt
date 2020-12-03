@@ -5,9 +5,11 @@ import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.ScanSettings
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Resources
 import android.os.Build
+import android.os.Bundle
 import android.util.Log
 import java.util.*
 import java.util.concurrent.TimeUnit
@@ -86,6 +88,15 @@ object Utils {
         val half = limit / 2
         return tag.substring(0, half) + '…' + tag.substring(length - half)
     }
+
+    @JvmStatic
+    fun getClass(o: Any?): Class<out Any>? = if (o is Class<*>) o else o?.javaClass
+
+    @JvmStatic
+    fun getClassName(o: Any?) = getClassName(getClass(o))
+
+    @JvmStatic
+    fun getClassName(c: Class<*>?) = getClassName(c?.name, true)
 
     @JvmStatic
     fun getClassName(className: String?, shortClassName: Boolean): String {
@@ -210,6 +221,48 @@ object Utils {
         }
         return sb.toString()
     }
+
+    @JvmStatic
+    fun toString(intent: Intent?): String {
+        if (intent == null) {
+            return "null"
+        }
+        val sb = StringBuilder()
+        sb.append(intent.toString())
+        val bundle = intent.extras
+        sb.append(", extras=").append(toString(bundle))
+        return sb.toString()
+    }
+
+    @JvmStatic
+    fun toString(bundle: Bundle?): String {
+        if (bundle == null) {
+            return "null"
+        }
+        val sb = StringBuilder()
+        val keys = bundle.keySet()
+        val it = keys.iterator()
+        sb.append('{')
+        while (it.hasNext()) {
+            val key = it.next()
+            var value = bundle.get(key)
+            sb.append(quote(key)).append('=')
+            if (key.toLowerCase(Locale.getDefault()).contains("password")) {
+                value = "*CENSORED*"
+            }
+            when (value) {
+                is Bundle -> sb.append(toString(value))
+                is Intent -> sb.append(toString(value))
+                else -> sb.append(quote(value))
+            }
+            if (it.hasNext()) {
+                sb.append(", ")
+            }
+        }
+        sb.append('}')
+        return sb.toString()
+    }
+
 
     //
     //
