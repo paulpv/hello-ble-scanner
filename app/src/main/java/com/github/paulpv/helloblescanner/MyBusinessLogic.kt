@@ -294,8 +294,6 @@ class MyBusinessLogic(private val application: Application, private val looper: 
 
     private val scannerCallbacks = object : ScannerAbstract.Callbacks {
         //@formatter:off
-        override fun onScanningStarted() = this@MyBusinessLogic.onScanningStarted()
-        override fun onScanningStopped() = this@MyBusinessLogic.onScanningStopped()
         override fun onScanResultAdded(item: ExpiringIterableLongSparseArray.ItemWrapper<BleScanResult>) = this@MyBusinessLogic.onScanResultAdded(item)
         override fun onScanResultUpdated(item: ExpiringIterableLongSparseArray.ItemWrapper<BleScanResult>) = this@MyBusinessLogic.onScanResultUpdated(item)
         override fun onScanResultRemoved(item: ExpiringIterableLongSparseArray.ItemWrapper<BleScanResult>) = this@MyBusinessLogic.onScanResultRemoved(item)
@@ -456,20 +454,19 @@ class MyBusinessLogic(private val application: Application, private val looper: 
     private val MESSAGE_WHAT_RESUME = 101
 
     private fun handleMessage(msg: Message): Boolean {
-        val what = msg.what
-        //Log.i(TAG, "handleMessage: msg.what=$what")
-        var handled = false
-        when (what) {
+        return when (msg.what) {
             MESSAGE_WHAT_PAUSE -> {
                 scanPause()
-                handled = true
+                true
             }
             MESSAGE_WHAT_RESUME -> {
                 scanResume()
-                handled = true
+                true
+            }
+            else -> {
+                false
             }
         }
-        return handled
     }
 
     private fun delayedScanningResumeAdd() {
