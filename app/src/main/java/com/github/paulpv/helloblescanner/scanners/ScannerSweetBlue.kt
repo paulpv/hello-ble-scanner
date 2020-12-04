@@ -171,8 +171,12 @@ class ScannerSweetBlue(
             //autoScanPauseTimeWhileAppIsBackgrounded = Interval...
             //defaultListComparator = ...
 
+            /*
+            if (nativeScanFilters != null) {
             // Only way to add a filter to PendingIntent scans
             defaultNativeScanFilterList = nativeScanFilters // causing a problem?!?!
+            }
+            */
 
             //
             // Undiscovery fine-tuning
