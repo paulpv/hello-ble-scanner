@@ -1,6 +1,7 @@
 package com.github.paulpv.helloblescanner.scanners
 
 import android.app.PendingIntent
+import android.bluetooth.le.ScanFilter
 import android.content.Context
 import android.content.Intent
 import android.util.Log
@@ -76,7 +77,7 @@ abstract class ScannerAbstract(
      * @param scanPendingIntent null if using ScanCallback, non-null if using PendingIntent
      * @return true if successful; false if not successful
      */
-    open fun scanStart(scanPendingIntent: PendingIntent?): Boolean {
+    open fun scanStart(scanFiltersNative: List<ScanFilter>?, scanPendingIntent: PendingIntent?): Boolean {
         recentScanResults.resume()
         return true
     }

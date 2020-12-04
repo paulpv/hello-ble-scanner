@@ -94,25 +94,27 @@ class MainActivity : AppCompatActivity(), ScannerAbstract.Callbacks {
             return false
         }
 
-        var menuItem = menu?.findItem(
+        menu?.findItem(
             when (businessLogic.scannerType) {
                 MyBusinessLogic.ScannerTypes.Native -> R.id.action_scanner_type_native
                 MyBusinessLogic.ScannerTypes.Nordic -> R.id.action_scanner_type_nordic
                 MyBusinessLogic.ScannerTypes.SweetBlue -> R.id.action_scanner_type_sweetblue
             }
-        )
-        if (menuItem != null) {
-            menuItem.isChecked = true
-        }
+        )?.isChecked = true
 
-        menuItem = when {
+        when {
             businessLogic.USE_SCAN_CALLBACK -> menu?.findItem(R.id.action_scanner_mode_scancallback)
             businessLogic.USE_SCAN_PENDING_INTENT -> menu?.findItem(R.id.action_scanner_mode_pendingintent)
             else -> null
-        }
-        if (menuItem != null) {
-            menuItem.isChecked = true
-        }
+        }?.isChecked = true
+
+        menu?.findItem(
+            when (businessLogic.scanFilterType) {
+                MyBusinessLogic.ScanFilterType.Null -> R.id.action_scanner_filter_null
+                MyBusinessLogic.ScanFilterType.Empty -> R.id.action_scanner_filter_empty
+                MyBusinessLogic.ScanFilterType.Specific -> R.id.action_scanner_filter_specific
+            }
+        )?.isChecked = true
 
         return true
     }
@@ -121,7 +123,6 @@ class MainActivity : AppCompatActivity(), ScannerAbstract.Callbacks {
         if (super.onOptionsItemSelected(item)) {
             return true
         }
-
         var consume = true
         when (item.itemId) {
             R.id.action_scanner_type_native -> {
@@ -138,6 +139,15 @@ class MainActivity : AppCompatActivity(), ScannerAbstract.Callbacks {
             }
             R.id.action_scanner_mode_scancallback -> {
                 businessLogic.USE_SCAN_CALLBACK = true
+            }
+            R.id.action_scanner_filter_null -> {
+                businessLogic.scanFilterType = MyBusinessLogic.ScanFilterType.Null
+            }
+            R.id.action_scanner_filter_empty -> {
+                businessLogic.scanFilterType = MyBusinessLogic.ScanFilterType.Empty
+            }
+            R.id.action_scanner_filter_specific -> {
+                businessLogic.scanFilterType = MyBusinessLogic.ScanFilterType.Specific
             }
             R.id.action_clear -> {
                 businessLogic.clear()

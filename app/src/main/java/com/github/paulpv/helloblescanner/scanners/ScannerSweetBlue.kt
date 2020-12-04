@@ -27,7 +27,6 @@ class ScannerSweetBlue(
     applicationContext: Context,
     scanResultTimeoutMillis: Long,
     callbacks: Callbacks,
-    scanFiltersNative: List<android.bluetooth.le.ScanFilter>,
     scanSettingsNative: android.bluetooth.le.ScanSettings,
     apiKey: String
 ) : ScannerAbstract(applicationContext, scanResultTimeoutMillis, callbacks) {
@@ -129,15 +128,10 @@ class ScannerSweetBlue(
         }
     }
 
-    private val scanFilterSweetBlue: MyScanFilter
-    private val nativeScanFilters: List<NativeScanFilter>
     private val manager: BleManager
     private val discoveryListener: DiscoveryListener
 
     init {
-        scanFilterSweetBlue = MyScanFilter(scanFiltersNative)
-        nativeScanFilters = toNativeScanFilters(scanFiltersNative)
-
         val config = BleManagerConfig()
         with(config) {
             //
@@ -205,12 +199,23 @@ class ScannerSweetBlue(
         manager.removeAllDevicesFromCache()
     }
 
+    private var scanFilterSweetBlue: MyScanFilter? = null
     private var scanPendingIntent: PendingIntent? = null
 
-    override fun scanStart(scanPendingIntent: PendingIntent?): Boolean {
-        if (!super.scanStart(scanPendingIntent)) {
+    override fun scanStart(
+        scanFiltersNative: List<android.bluetooth.le.ScanFilter>?,
+        scanPendingIntent: PendingIntent?
+    ): Boolean {
+        if (!super.scanStart(scanFiltersNative, scanPendingIntent)) {
             return false
         }
+
+        scanFilterSweetBlue = if (scanFiltersNative != null) MyScanFilter(scanFiltersNative) else null
+
+        val config = manager.configClone
+        config.defaultNativeScanFilterList =
+            if (scanFiltersNative != null) toNativeScanFilters(scanFiltersNative) else BleManagerConfig.EMPTY_NATIVE_FILTER
+        manager.setConfig(config)
 
         @Suppress("NAME_SHADOWING")
         val scanPendingIntent = if (scanPendingIntent == null || Build.VERSION.SDK_INT < 26) null else scanPendingIntent
@@ -218,6 +223,11 @@ class ScannerSweetBlue(
         val options = ScanOptions()
         if (scanPendingIntent == null) {
             options.withDiscoveryListener(discoveryListener)
+            /*
+            if (scanFilterSweetBlue != null) {
+                options.withScanFilter(scanFilterSweetBlue)
+            }
+            */
             Log.i(TAG, "scanStart: startScan starting ScanCallback scan")
         } else {
             options.withPendingIntent(scanPendingIntent)
@@ -250,7 +260,8 @@ class ScannerSweetBlue(
     private fun scanFilterPass(device: BleDevice): Boolean = scanFilterPass(device.name_normalized, device.macAddress)
 
     private fun scanFilterPass(name: String, macAddress: String): Boolean {
-        return if (scanFilterSweetBlue.passes(name, macAddress)) {
+        val scanFilterSweetBlue = this.scanFilterSweetBlue
+        return if (scanFilterSweetBlue == null || scanFilterSweetBlue.passes(name, macAddress)) {
             true
         } else {
             @Suppress("SimplifyBooleanWithConstants")

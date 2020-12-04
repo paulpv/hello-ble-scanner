@@ -34,7 +34,9 @@ class MyBusinessLogic(private val application: Application, private val looper: 
 
         private const val SCAN_RECEIVER_REQUEST_CODE = 69
 
-        private val SCAN_FILTER_EMPTY: ScanFilter = ScanFilter.Builder().build()
+        private val SCAN_FILTER_EMPTY = ScanFilter.Builder().build()
+
+        private val SCAN_FILTERS_EMPTY = listOf<ScanFilter>(SCAN_FILTER_EMPTY)
 
         @Suppress("PrivatePropertyName")
         private val PERSISTENT_SCANNING_STARTED_UPTIME_MILLIS_UNDEFINED = 0L
@@ -252,7 +254,6 @@ class MyBusinessLogic(private val application: Application, private val looper: 
         return builder.build()
     }
 
-    private val nativeScanFilters = newNativeScanFilters()
     private val nativeScanSettings = newNativeScanSettings()
 
     @Suppress("MemberVisibilityCanBePrivate", "PropertyName")
@@ -287,6 +288,31 @@ class MyBusinessLogic(private val application: Application, private val looper: 
         }
         set(value) {
             USE_SCAN_PENDING_INTENT = !value
+        }
+
+    private var nativeScanFilters: List<ScanFilter>? = null
+
+    enum class ScanFilterType {
+        Null,
+        Empty,
+        Specific
+    }
+
+    var scanFilterType = ScanFilterType.Specific
+        set(value) {
+            val wasScanning = isScanStarted
+            if (wasScanning) {
+                scanStop()
+            }
+            field = value
+            nativeScanFilters = when (value) {
+                ScanFilterType.Null -> null
+                ScanFilterType.Empty -> SCAN_FILTERS_EMPTY
+                ScanFilterType.Specific -> newNativeScanFilters()
+            }
+            if (wasScanning) {
+                scanStart()
+            }
         }
 
     private fun newScanningPendingIntent(): PendingIntent? {
@@ -348,9 +374,9 @@ class MyBusinessLogic(private val application: Application, private val looper: 
         val scanResultTimeoutMillis = 30 * 1000L
         return when (scannerType) {
             //@formatter:off
-            ScannerTypes.Native -> ScannerNative(application, scanResultTimeoutMillis, scannerCallbacks, nativeScanFilters, nativeScanSettings)
-            ScannerTypes.Nordic -> ScannerNordic(application, scanResultTimeoutMillis, scannerCallbacks, nativeScanFilters, nativeScanSettings)
-            ScannerTypes.SweetBlue -> ScannerSweetBlue(application, scanResultTimeoutMillis, scannerCallbacks, nativeScanFilters, nativeScanSettings, SWEETBLUE_API_KEY)
+            ScannerTypes.Native -> ScannerNative(application, scanResultTimeoutMillis, scannerCallbacks, nativeScanSettings)
+            ScannerTypes.Nordic -> ScannerNordic(application, scanResultTimeoutMillis, scannerCallbacks, nativeScanSettings)
+            ScannerTypes.SweetBlue -> ScannerSweetBlue(application, scanResultTimeoutMillis, scannerCallbacks, nativeScanSettings, SWEETBLUE_API_KEY)
             //@formatter:on
         }
     }
@@ -374,12 +400,17 @@ class MyBusinessLogic(private val application: Application, private val looper: 
     }
 
     fun initialize() {
-        Log.i(TAG, "initialize")
-        scannerType = SCANNER_TYPE_DEFAULT
+        Log.i(TAG, "+initialize()")
 
+        scanFilterType = scanFilterType
+        Log.i(TAG, "init: scannerFilterType=$scanFilterType")
+
+        scannerType = SCANNER_TYPE_DEFAULT
         Log.i(TAG, "init: scannerType=$scannerType")
         Log.i(TAG, "init: scanner=$scanner")
         Log.i(TAG, "init: USE_SCAN_PENDING_INTENT=$USE_SCAN_PENDING_INTENT")
+
+        Log.i(TAG, "-initialize()")
     }
 
     fun clear() {
@@ -420,8 +451,10 @@ class MyBusinessLogic(private val application: Application, private val looper: 
         //@formatter:off
         Log.e(TAG, "scanResume: scanningElapsedMillis=${Utils.getTimeDurationFormattedString(scanningElapsedMillis)}, scanStartCount=${scanStartCount}; scanner.scanStart()")
         //@formatter:on
+        // TODO:(pv) Might this be more reliable with a **fixed** PendingIntent? (I am not seeing that it is any more or less)
         val scanningPendingIntent = if (USE_SCAN_PENDING_INTENT) newScanningPendingIntent() else null
-        scanner.scanStart(scanningPendingIntent)
+        // TODO:(pv) Error checking (and don't always return true)
+        scanner.scanStart(nativeScanFilters, scanningPendingIntent)
         scanStartCount++
         delayedScanningPauseAdd()
         return true

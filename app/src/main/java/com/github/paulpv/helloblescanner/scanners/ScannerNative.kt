@@ -14,7 +14,6 @@ class ScannerNative(
     applicationContext: Context,
     scanResultTimeoutMillis: Long,
     callbacks: Callbacks,
-    private val scanFiltersNative: List<ScanFilter>,
     private val scanSettingsNative: ScanSettings
 ) : ScannerAbstract(applicationContext, scanResultTimeoutMillis, callbacks) {
     companion object {
@@ -31,8 +30,8 @@ class ScannerNative(
 
     private var scanPendingIntent: PendingIntent? = null
 
-    override fun scanStart(scanPendingIntent: PendingIntent?): Boolean {
-        if (!super.scanStart(scanPendingIntent)) {
+    override fun scanStart(scanFiltersNative: List<ScanFilter>?, scanPendingIntent: PendingIntent?): Boolean {
+        if (!super.scanStart(scanFiltersNative, scanPendingIntent)) {
             return false
         }
         val scannerNative = bluetoothAdapter?.bluetoothLeScanner

@@ -16,7 +16,6 @@ class ScannerNordic(
     applicationContext: Context,
     scanResultTimeoutMillis: Long,
     callbacks: Callbacks,
-    scanFiltersNative: List<android.bluetooth.le.ScanFilter>,
     scanSettingsNative: android.bluetooth.le.ScanSettings
 ) : ScannerAbstract(applicationContext, scanResultTimeoutMillis, callbacks) {
     companion object {
@@ -110,7 +109,6 @@ class ScannerNordic(
     }
 
     private val scannerNordic = BluetoothLeScannerCompat.getScanner()
-    private val scanFiltersNordic = scanFiltersNativeToNordic(scanFiltersNative)
     private val scanSettingsNordic = scanSettingsNativeToNordic(scanSettingsNative)
     private val scanCallbackNordic = object : ScanCallback() {
         //@formatter:off
@@ -122,10 +120,11 @@ class ScannerNordic(
 
     private var scanPendingIntent: PendingIntent? = null
 
-    override fun scanStart(scanPendingIntent: PendingIntent?): Boolean {
-        if (!super.scanStart(scanPendingIntent)) {
+    override fun scanStart(scanFiltersNative: List<android.bluetooth.le.ScanFilter>?, scanPendingIntent: PendingIntent?): Boolean {
+        if (!super.scanStart(scanFiltersNative, scanPendingIntent)) {
             return false
         }
+        val scanFiltersNordic = scanFiltersNativeToNordic(scanFiltersNative)
         // TODO:(pv) Error handling...
         return if (scanPendingIntent == null || Build.VERSION.SDK_INT < 26) {
             Log.i(TAG, "scanStart: startScan starting ScanCallback scan")

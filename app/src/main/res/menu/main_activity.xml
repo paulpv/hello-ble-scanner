@@ -45,8 +45,28 @@
             app:showAsAction="never" />
     </group>
 
+    <group
+        android:id="@+id/action_scanner_filter"
+        android:checkableBehavior="single"
+        android:orderInCategory="300"
+        android:visible="true">
+        <item
+            android:id="@+id/action_scanner_filter_null"
+            android:title="ScanFilter null"
+            app:showAsAction="never" />
+        <item
+            android:id="@+id/action_scanner_filter_empty"
+            android:title="ScanFilter EMPTY"
+            app:showAsAction="never" />
+        <item
+            android:id="@+id/action_scanner_filter_specific"
+            android:title="ScanFilter Specific"
+            app:showAsAction="never" />
+    </group>
+
     <item
         android:id="@+id/action_clear"
+        android:orderInCategory="400"
         android:title="@string/action_clear"
         app:showAsAction="never" />
 
