@@ -3,6 +3,7 @@ package com.github.paulpv.helloblescanner
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.le.ScanRecord
 import com.github.paulpv.helloblescanner.utils.LowPassFilter
+import com.github.paulpv.helloblescanner.utils.Utils
 import java.lang.reflect.InvocationTargetException
 
 class BleScanResult {

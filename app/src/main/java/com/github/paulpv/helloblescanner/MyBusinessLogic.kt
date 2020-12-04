@@ -17,6 +17,7 @@ import com.github.paulpv.helloblescanner.scanners.ScannerAbstract
 import com.github.paulpv.helloblescanner.scanners.ScannerNative
 import com.github.paulpv.helloblescanner.scanners.ScannerNordic
 import com.github.paulpv.helloblescanner.scanners.ScannerSweetBlue
+import com.github.paulpv.helloblescanner.utils.Utils
 import kotlin.math.ceil
 
 class MyBusinessLogic(private val application: Application, private val looper: Looper) {

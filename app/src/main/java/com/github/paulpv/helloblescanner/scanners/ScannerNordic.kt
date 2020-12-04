@@ -8,7 +8,7 @@ import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
 import com.github.paulpv.helloblescanner.BleScanResult
-import com.github.paulpv.helloblescanner.Utils
+import com.github.paulpv.helloblescanner.utils.Utils
 import no.nordicsemi.android.support.v18.scanner.*
 import java.util.*
 

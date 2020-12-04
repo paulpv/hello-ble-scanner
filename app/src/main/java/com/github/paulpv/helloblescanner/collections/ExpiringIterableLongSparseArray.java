@@ -10,7 +10,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.github.paulpv.helloblescanner.Utils;
+import com.github.paulpv.helloblescanner.utils.Utils;
 import com.github.paulpv.helloblescanner.utils.ListenerManager;
 
 import java.util.Iterator;

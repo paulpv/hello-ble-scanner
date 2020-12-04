@@ -9,7 +9,7 @@ import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
 import com.github.paulpv.helloblescanner.BleScanResult
-import com.github.paulpv.helloblescanner.Utils
+import com.github.paulpv.helloblescanner.utils.Utils
 import com.idevicesinc.sweetblue.*
 import com.idevicesinc.sweetblue.internal.IBleDevice
 import com.idevicesinc.sweetblue.internal.P_BleDeviceImpl

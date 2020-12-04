@@ -6,7 +6,7 @@ import android.content.Intent
 import android.util.Log
 import androidx.annotation.RequiresApi
 import com.github.paulpv.helloblescanner.BleScanResult
-import com.github.paulpv.helloblescanner.Utils
+import com.github.paulpv.helloblescanner.utils.Utils
 import com.github.paulpv.helloblescanner.collections.ExpiringIterableLongSparseArray
 
 abstract class ScannerAbstract(

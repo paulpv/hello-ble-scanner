@@ -4,7 +4,7 @@ import android.util.Log;
 
 import androidx.annotation.Nullable;
 
-import com.github.paulpv.helloblescanner.Utils;
+import com.github.paulpv.helloblescanner.utils.Utils;
 
 import org.jetbrains.annotations.NotNull;
 

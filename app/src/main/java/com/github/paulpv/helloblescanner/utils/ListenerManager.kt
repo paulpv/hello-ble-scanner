@@ -2,7 +2,6 @@ package com.github.paulpv.helloblescanner.utils
 
 import android.util.Log
 import com.github.paulpv.helloblescanner.BuildConfig
-import com.github.paulpv.helloblescanner.Utils
 import java.util.*
 
 open class ListenerManager<T>(name: String) {

@@ -1,4 +1,4 @@
-package com.github.paulpv.helloblescanner
+package com.github.paulpv.helloblescanner.utils
 
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter

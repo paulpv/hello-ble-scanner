@@ -8,7 +8,7 @@ import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
 import com.github.paulpv.helloblescanner.BleScanResult
-import com.github.paulpv.helloblescanner.Utils
+import com.github.paulpv.helloblescanner.utils.Utils
 
 class ScannerNative(
     applicationContext: Context,
