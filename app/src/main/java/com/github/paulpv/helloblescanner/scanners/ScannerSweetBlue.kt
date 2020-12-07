@@ -216,24 +216,22 @@ class ScannerSweetBlue(
 
         scanFilterSweetBlue = if (scanFiltersNative != null) MyScanFilter(scanFiltersNative) else null
 
-        val config = manager.configClone
-        config.defaultNativeScanFilterList =
-            if (scanFiltersNative != null) toNativeScanFilters(scanFiltersNative) else BleManagerConfig.EMPTY_NATIVE_FILTER
-        manager.setConfig(config)
-
         @Suppress("NAME_SHADOWING")
         val scanPendingIntent = if (scanPendingIntent == null || Build.VERSION.SDK_INT < 26) null else scanPendingIntent
 
         val options = ScanOptions()
         if (scanPendingIntent == null) {
             options.withDiscoveryListener(discoveryListener)
-            /*
             if (scanFilterSweetBlue != null) {
                 options.withScanFilter(scanFilterSweetBlue)
             }
-            */
             Log.i(TAG, "scanStart: startScan starting ScanCallback scan")
         } else {
+            val config = manager.configClone
+            //@formatter:off
+            config.defaultNativeScanFilterList = if (scanFiltersNative != null) toNativeScanFilters(scanFiltersNative) else BleManagerConfig.EMPTY_NATIVE_FILTER
+            //@formatter:on
+            manager.setConfig(config)
             options.withPendingIntent(scanPendingIntent)
             Log.i(TAG, "scanStart: startScan starting PendingIntent scan")
         }
