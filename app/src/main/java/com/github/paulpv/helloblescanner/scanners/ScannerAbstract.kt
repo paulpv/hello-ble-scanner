@@ -78,6 +78,7 @@ abstract class ScannerAbstract(
      * @return true if successful; false if not successful
      */
     open fun scanStart(scanFiltersNative: List<ScanFilter>?, scanPendingIntent: PendingIntent?): Boolean {
+        Log.i(TAG, "scanStart(scanFiltersNative=$scanFiltersNative, scanPendingIntent=$scanPendingIntent)")
         recentScanResults.resume()
         return true
     }
@@ -86,6 +87,7 @@ abstract class ScannerAbstract(
      * @return true if successful; false if not successful
      */
     open fun scanStop(): Boolean {
+        Log.i(TAG, "scanStop()")
         recentScanResults.pause()
         return true
     }
